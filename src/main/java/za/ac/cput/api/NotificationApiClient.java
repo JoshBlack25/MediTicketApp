@@ -21,6 +21,11 @@ public class NotificationApiClient {
         return client.get("/notifications/read/" + id, Notification.class);
     }
 
+
+    public BaseApiClient.ApiResult<Notification> markAsRead(int id) {
+        return client.patch("/notifications/read/" + id, null, Notification.class);
+    }
+
     public BaseApiClient.ApiResult<Notification> update(Notification notification) {
         return client.put("/notifications/update", notification, Notification.class);
     }
@@ -52,4 +57,5 @@ public class NotificationApiClient {
     public BaseApiClient.ApiResult<List<Notification>> findByType(String type) {
         return client.getList("/notifications/type/" + type, new TypeReference<List<Notification>>() {});
     }
+
 }

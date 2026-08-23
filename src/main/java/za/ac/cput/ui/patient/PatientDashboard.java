@@ -61,7 +61,7 @@ public class PatientDashboard extends JPanel {
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(placeholder("Tickets — coming soon"), PAGE_TICKETS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
-        pageContainer.add(placeholder("Notifications — coming soon"), PAGE_NOTIFICATIONS);
+        pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
         pageContainer.add(placeholder("Profile — coming soon"), PAGE_PROFILE);
     }
 
