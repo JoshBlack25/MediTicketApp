@@ -19,9 +19,11 @@ import java.math.RoundingMode;
  * Payments page from this point.
  *
  * Payment method determines how settlement happens: EFT routes the
- * patient through their own self-checkout (FakeCheckoutDialog); CASH,
- * CARD, and MEDICAL_AID are settled in person at the clinic, so staff
- * confirm those payments themselves once collected.
+ * patient through their own self-checkout (FakeCheckoutDialog);
+ * MEDICAL_AID lets the patient submit their claim details themselves
+ * (MedicalAidDialog), but the payment stays PENDING until the scheme
+ * authorises the claim and staff confirm it; CASH and CARD are settled
+ * in person at the clinic, so staff confirm those once collected.
  */
 public class GeneratePaymentDialog {
 

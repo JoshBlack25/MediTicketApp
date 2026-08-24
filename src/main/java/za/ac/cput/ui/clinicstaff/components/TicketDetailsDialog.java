@@ -23,8 +23,10 @@ import java.time.format.DateTimeFormatter;
  *
  * Payment confirmation ("Mark as Paid") depends on payment method: EFT is
  * settled entirely by the patient via self-checkout (their own Payments
- * page); CASH, CARD, and MEDICAL_AID are collected in person, so staff
- * confirm those here once received.
+ * page); MEDICAL_AID is claimed by the patient from their own Payments
+ * page but stays PENDING until the scheme authorises the claim, so staff
+ * confirm it here once approved; CASH and CARD are collected in person,
+ * so staff confirm those here once received.
  */
 public class TicketDetailsDialog {
 
@@ -71,6 +73,7 @@ public class TicketDetailsDialog {
             content.add(labeledRow("Status", payStatus));
 
             boolean isEft = "EFT".equals(existingPayment.getPaymentMethod());
+            boolean isMedicalAid = "MEDICAL_AID".equals(existingPayment.getPaymentMethod());
             boolean isPending = "PENDING".equals(existingPayment.getPaymentStatus());
 
             if (isPending && isEft) {
@@ -81,7 +84,9 @@ public class TicketDetailsDialog {
                 waiting.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, 0, 0, 0));
                 content.add(waiting);
             } else if (isPending) {
-                JLabel note = new JLabel("<html><i>Collected in person — confirm once received.</i></html>");
+                JLabel note = new JLabel(isMedicalAid
+                        ? "<html><i>Awaiting medical aid authorisation — confirm once approved.</i></html>"
+                        : "<html><i>Collected in person — confirm once received.</i></html>");
                 note.setFont(FontManager.bodyFont(Font.PLAIN, 12));
                 note.setForeground(AppTheme.TEXT_MUTED);
                 note.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -154,9 +159,12 @@ public class TicketDetailsDialog {
     // Flipping to PAID triggers PaymentService.closeTicketIfPaid() server-side
     // automatically — no separate "close ticket" call needed here.
     private static void markAsPaid(JDialog dialog, Component parent, Payment payment, Runnable onChanged) {
-        int confirm = JOptionPane.showConfirmDialog(dialog,
-                "Confirm that payment of R" + formatAmount(payment.getPaymentAmount())
-                        + " has been received in person?",
+        String amount = formatAmount(payment.getPaymentAmount());
+        String prompt = "MEDICAL_AID".equals(payment.getPaymentMethod())
+                ? "Confirm that the medical aid claim for R" + amount + " has been approved?"
+                : "Confirm that payment of R" + amount + " has been received in person?";
+
+        int confirm = JOptionPane.showConfirmDialog(dialog, prompt,
                 "Mark as Paid", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) return;
 
