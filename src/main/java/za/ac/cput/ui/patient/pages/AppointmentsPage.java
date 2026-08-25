@@ -15,12 +15,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Patient-side Appointments — view only, plus booking. No status-changing
- * actions exist here at all; approval/rejection/completion are entirely
- * nurse/admin/doctor territory per the workflow. Loaded via
- * findByPatient(selfId) so a patient only ever sees their own appointments.
- */
+
 public class AppointmentsPage extends JPanel {
 
     private DefaultTableModel tableModel;
@@ -151,7 +146,7 @@ public class AppointmentsPage extends JPanel {
         return scroll;
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+
 
     private void loadData() {
         int patientId = SessionManager.getInstance().getUserId();
@@ -199,7 +194,7 @@ public class AppointmentsPage extends JPanel {
         return allAppointments.stream().filter(a -> a.getAppointmentId() == appointmentId).findFirst().orElse(null);
     }
 
-    // ── Table action column ──────────────────────────────────────
+
 
     private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
         ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }

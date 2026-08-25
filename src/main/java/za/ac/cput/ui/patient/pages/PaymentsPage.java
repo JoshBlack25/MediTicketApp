@@ -17,13 +17,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * No findByPatient endpoint exists on PaymentApiClient, so payments are
- * loaded via getAll() and filtered client-side to those whose
- * appointment.patient.userId matches the logged-in patient — same
- * pattern as Doctor's Tickets page. Clicking a PENDING row opens the fake
- * checkout flow; clicking anything else just shows a read-only receipt.
- */
+
 public class PaymentsPage extends JPanel {
 
     private DefaultTableModel tableModel;
@@ -177,7 +171,7 @@ public class PaymentsPage extends JPanel {
         };
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+
 
     private void loadData() {
         int patientId = SessionManager.getInstance().getUserId();

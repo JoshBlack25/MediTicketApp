@@ -99,7 +99,11 @@ public class Sidebar extends JPanel {
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
         JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(FontManager.bodyFont(Font.PLAIN, 16));
+// Icons are emoji glyphs — Inter (our custom embedded font) has no emoji
+// coverage and doesn't get OS font-fallback the way Java's built-in
+// logical fonts do. Use a plain system font here so emoji render
+// correctly instead of as empty boxes.
+        iconLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
 
         JLabel textLabel = new JLabel(label);
         labelsByKey.put(label, textLabel); // keyed loosely; style pass below uses rowsByKey instead

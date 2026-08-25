@@ -11,15 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.math.RoundingMode;
 
-/**
- * Fake checkout — no real payment gateway integration exists. Collects
- * cosmetic card details (never sent anywhere, never stored) purely to
- * simulate the feel of paying, then flips the Payment to PAID via the
- * same PaymentApiClient.update() call the old admin "Mark as Paid" used.
- * The backend's auto-close hook (PaymentService) doesn't care who
- * triggered it, so no backend changes were needed to move this action
- * from staff to patient.
- */
+
 public class FakeCheckoutDialog {
 
     public static void show(Component parent, Payment payment, Runnable onPaid) {
@@ -147,9 +139,7 @@ public class FakeCheckoutDialog {
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
         wrapper.setOpaque(false);
-        // Returning just the field for simplicity in the caller's layout —
-        // caller adds the field directly; label omitted here intentionally
-        // since amountLabel-style headers are used elsewhere in this dialog.
+
         JTextField field = new JTextField();
         field.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         field.putClientProperty("JTextField.placeholderText", placeholder);

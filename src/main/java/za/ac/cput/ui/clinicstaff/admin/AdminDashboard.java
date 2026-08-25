@@ -23,6 +23,7 @@ public class AdminDashboard extends JPanel {
     private static final String PAGE_HOME = "HOME";
     private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
     private static final String PAGE_STAFF = "STAFF";
+    private static final String PAGE_PATIENTS = "PATIENTS";
     private static final String PAGE_ONBOARDING = "ONBOARDING";
     private static final String PAGE_TICKETS = "TICKETS";
     private static final String PAGE_REPORTS = "REPORTS";
@@ -39,6 +40,7 @@ public class AdminDashboard extends JPanel {
                 new NavItem(PAGE_HOME, "\uD83C\uDFE0", "Home"),
                 new NavItem(PAGE_APPOINTMENTS, "\uD83D\uDCC5", "Appointments"),
                 new NavItem(PAGE_STAFF, "\uD83D\uDC65", "Staff"),
+                new NavItem(PAGE_PATIENTS, "\uD83D\uDECC", "Patients"),
                 new NavItem(PAGE_ONBOARDING, "\uD83D\uDCCB", "Onboarding"),
                 new NavItem(PAGE_TICKETS, "\uD83C\uDFAB", "Tickets"),
                 new NavItem(PAGE_REPORTS, "\uD83D\uDCCA", "Reports"),
@@ -66,6 +68,7 @@ public class AdminDashboard extends JPanel {
         pageContainer.add(new DashboardPage(), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(new StaffPage(), PAGE_STAFF);
+        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
         pageContainer.add(new EmployeeOnboardingPage(), PAGE_ONBOARDING);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new ReportsPage(), PAGE_REPORTS);
