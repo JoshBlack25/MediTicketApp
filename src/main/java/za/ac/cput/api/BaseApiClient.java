@@ -195,4 +195,7 @@ public class BaseApiClient {
         public String getMessage() { return message; }
         public int getStatusCode() { return statusCode; }
     }
+    public boolean hasAuthToken() {
+        return authToken != null;
+    }
 }

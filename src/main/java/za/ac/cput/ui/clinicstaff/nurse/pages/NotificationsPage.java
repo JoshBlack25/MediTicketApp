@@ -241,12 +241,14 @@ public class NotificationsPage extends JPanel {
         card.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                ApiClientProvider.getInstance().notifications().markAsRead(n.getNotificationId());
-                NotificationDetailsDialog.show(NotificationsPage.this, n, "You", null);
-                loadNotifications();
+                NotificationDetailsDialog.show(NotificationsPage.this, n, "You", null,
+                        () ->{
+                            var result = ApiClientProvider.getInstance().notifications().markAsRead(n.getNotificationId());
+                            System.out.println("markAsRead: success=" + result.isSuccess() + " status=" + result.getStatusCode() + " msg=" + result.getMessage());
+                            loadNotifications();
+                        });
             }
         });
-
         return card;
     }
 }
