@@ -2,7 +2,7 @@ package za.ac.cput.ui.layout;
 
 public class NavItem {
     private final String key;
-    private final String icon;   // Unicode glyph for now; swap for ImageIcon path later
+    private final String icon;
     private final String label;
 
     public NavItem(String key, String icon, String label) {

@@ -48,8 +48,24 @@ public class Sidebar extends JPanel {
         header.setBackground(AppTheme.SURFACE);
         header.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_LG, AppTheme.SPACE_MD, AppTheme.SPACE_LG, AppTheme.SPACE_MD));
 
-        JLabel logo = new JLabel(ImageManager.getIcon(ImageManager.LOGO_ICON, -1, 40));
-        logo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // ===== Brand row: logo icon + "MediTicket" wordmark, side by side =====
+        JPanel brandRow = new JPanel();
+        brandRow.setLayout(new BoxLayout(brandRow, BoxLayout.X_AXIS));
+        brandRow.setOpaque(false);
+        brandRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        int logoHeight = 40;
+        JLabel logo = new JLabel(ImageManager.getIcon(ImageManager.LOGO_ICON, -1, logoHeight));
+        logo.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+        JLabel wordmark = new JLabel("MediTicket");
+        wordmark.setFont(FontManager.headlineFont(Font.BOLD, 24)); // tweak size here to match icon height visually
+        wordmark.setForeground(AppTheme.TEXT_PRIMARY);
+        wordmark.setBorder(BorderFactory.createEmptyBorder(0, AppTheme.SPACE_SM, 0, 0));
+        wordmark.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+        brandRow.add(logo);
+        brandRow.add(wordmark);
 
         JLabel subtitle = new JLabel("Clinic Management");
         subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 11));
@@ -57,7 +73,7 @@ public class Sidebar extends JPanel {
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setBorder(BorderFactory.createEmptyBorder(4, 2, 0, 0));
 
-        header.add(logo);
+        header.add(brandRow);
         header.add(subtitle);
         return header;
     }
@@ -74,7 +90,7 @@ public class Sidebar extends JPanel {
             row.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    selectKey(item.getKey());
+                    select(item.getKey());
                     onNavigate.accept(item.getKey());
                 }
             });
@@ -99,7 +115,11 @@ public class Sidebar extends JPanel {
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
         JLabel iconLabel = new JLabel(icon);
-        iconLabel.setFont(FontManager.bodyFont(Font.PLAIN, 16));
+// Icons are emoji glyphs — Inter (our custom embedded font) has no emoji
+// coverage and doesn't get OS font-fallback the way Java's built-in
+// logical fonts do. Use a plain system font here so emoji render
+// correctly instead of as empty boxes.
+        iconLabel.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 16));
 
         JLabel textLabel = new JLabel(label);
         labelsByKey.put(label, textLabel); // keyed loosely; style pass below uses rowsByKey instead
@@ -109,7 +129,7 @@ public class Sidebar extends JPanel {
         return row;
     }
 
-    private void selectKey(String key) {
+    public void select(String key) {
         selectedKey = key;
         applySelectionStyles();
     }

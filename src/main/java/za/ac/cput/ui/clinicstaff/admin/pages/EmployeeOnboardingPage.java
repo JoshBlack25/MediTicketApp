@@ -3,18 +3,21 @@ package za.ac.cput.ui.clinicstaff.admin.pages;
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.auth.EmployeeAccessRequest;
-import za.ac.cput.session.SessionManager;
+import za.ac.cput.ui.clinicstaff.components.AccessRequestDetailsDialog;
 import za.ac.cput.ui.clinicstaff.components.InviteEmployeeDialog;
-import za.ac.cput.ui.theme.AppDialog;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.util.List;
 
 public class EmployeeOnboardingPage extends JPanel {
+
+    private static final int ID_COLUMN = 4; // kept in the model for row lookups, hidden from view
 
     private DefaultTableModel tableModel;
     private JTable requestsTable;
@@ -136,16 +139,16 @@ public class EmployeeOnboardingPage extends JPanel {
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel note = new JLabel("Employees who self-requested access. Approving sends them an invitation email.");
+        JLabel note = new JLabel("Employees who self-requested access. Click a row to review, approve, or reject.");
         note.setFont(FontManager.bodyFont(Font.PLAIN, 12));
         note.setForeground(AppTheme.TEXT_MUTED);
         note.setAlignmentX(Component.LEFT_ALIGNMENT);
         note.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, AppTheme.SPACE_SM, 0));
 
-        String[] columns = {"Email", "Type", "Role", "Requested", "Actions"};
+        String[] columns = {"Email", "Type", "Role", "Requested", "id"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 4; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         requestsTable = new JTable(tableModel);
         requestsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -153,8 +156,13 @@ public class EmployeeOnboardingPage extends JPanel {
         requestsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         requestsTable.setShowGrid(false);
         requestsTable.setIntercellSpacing(new Dimension(0, 0));
-        requestsTable.getColumnModel().getColumn(4).setCellRenderer(new ActionCellRenderer());
-        requestsTable.getColumnModel().getColumn(4).setCellEditor(new ActionCellEditor());
+
+        // Hide the id column from view — it stays in the model so
+        // RowClickHelper can look up which request a row represents.
+        TableColumn idColumn = requestsTable.getColumnModel().getColumn(ID_COLUMN);
+        requestsTable.getColumnModel().removeColumn(idColumn);
+
+        RowClickHelper.makeRowsClickable(requestsTable, ID_COLUMN, this::openDetails);
 
         JScrollPane tableScroll = new JScrollPane(requestsTable);
         tableScroll.setPreferredSize(new Dimension(0, 260));
@@ -171,8 +179,6 @@ public class EmployeeOnboardingPage extends JPanel {
         BaseApiClient.ApiResult<List<EmployeeAccessRequest>> result =
                 ApiClientProvider.getInstance().auth().getAccessRequests("PENDING");
 
-
-
         tableModel.setRowCount(0);
         currentRequests = result.isSuccess() ? result.getData() : List.of();
 
@@ -181,85 +187,18 @@ public class EmployeeOnboardingPage extends JPanel {
             tableModel.addRow(new Object[]{
                     r.getEmail(), r.getRequestedUserType(), role,
                     r.getRequestDate() != null ? r.getRequestDate().toLocalDate().toString() : "—",
-                    r.getRequestId() // used by the action editor to look up the row
+                    r.getRequestId()
             });
         }
     }
 
-    private void approve(int requestId) {
-        int adminUserId = SessionManager.getInstance().getUserId();
-        BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance().auth().approveAccessRequest(requestId);
-        if (result.isSuccess()) {
-            AppDialog.show(this, "Request Approved",
-                    "An invitation email has been sent to the employee.", AppDialog.Type.SUCCESS);
-            loadPendingRequests();
-        } else {
-            AppDialog.show(this, "Unable to Approve",
-                    result.getMessage() != null ? result.getMessage() : "Something went wrong.", AppDialog.Type.ERROR);
-        }
-    }
-
-    private void reject(int requestId) {
-        String notes = JOptionPane.showInputDialog(this, "Reason for rejection (optional):", "Reject Request", JOptionPane.PLAIN_MESSAGE);
-        BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance().auth().rejectAccessRequest(requestId, notes);
-        if (result.isSuccess()) {
-            AppDialog.show(this, "Request Rejected", "The request has been rejected.", AppDialog.Type.INFO);
-            loadPendingRequests();
-        } else {
-            AppDialog.show(this, "Unable to Reject",
-                    result.getMessage() != null ? result.getMessage() : "Something went wrong.", AppDialog.Type.ERROR);
-        }
-    }
-
-    // ── Table action column: Approve / Reject buttons per row ─────
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 6, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-            add(smallButton("Approve", AppTheme.STATUS_SUCCESS));
-            add(smallButton("Reject", AppTheme.STATUS_DANGER));
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends javax.swing.AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
-        private int currentRequestId;
-
-        ActionCellEditor() {
-            JButton approveBtn = smallButton("Approve", AppTheme.STATUS_SUCCESS);
-            JButton rejectBtn = smallButton("Reject", AppTheme.STATUS_DANGER);
-            approveBtn.addActionListener(e -> { fireEditingStopped(); approve(currentRequestId); });
-            rejectBtn.addActionListener(e -> { fireEditingStopped(); reject(currentRequestId); });
-            panel.add(approveBtn);
-            panel.add(rejectBtn);
-            panel.setBackground(AppTheme.SURFACE);
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            currentRequestId = (int) tableModel.getValueAt(row, 4);
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return currentRequestId; }
-    }
-
-    private JButton smallButton(String text, Color color) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(color);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(color, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 8, 2, 8));
-        return button;
+    // Note: RowClickHelper's idColumn lookup reads table.getValueAt(row, idColumn),
+    // which still works correctly after removeColumn() — that call operates on the
+    // TableColumnModel (view), not the underlying TableModel the id data lives in.
+    private void openDetails(int requestId) {
+        currentRequests.stream()
+                .filter(r -> r.getRequestId() == requestId)
+                .findFirst()
+                .ifPresent(r -> AccessRequestDetailsDialog.show(this, r, this::loadPendingRequests));
     }
 }

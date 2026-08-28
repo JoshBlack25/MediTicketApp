@@ -20,6 +20,9 @@ public class PatientDashboard extends JPanel {
     private final CardLayout pageLayout = new CardLayout();
     private final JPanel pageContainer = new JPanel(pageLayout);
 
+    private Sidebar sidebar;
+    private TopHeader topHeader;
+
     private static final String PAGE_HOME = "HOME";
     private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
     private static final String PAGE_TICKETS = "TICKETS";
@@ -41,13 +44,20 @@ public class PatientDashboard extends JPanel {
                 new NavItem(PAGE_PROFILE, "\uD83D\uDC64", "Profile")
         );
 
-        Sidebar sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
+        sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
+
+        // Header must exist before registerPages(), since ProfilePage needs
+        // topHeader::refreshProfile to notify it of name/avatar changes.
+        topHeader = new TopHeader(() -> {
+            sidebar.select(PAGE_PROFILE);
+            showPage(PAGE_PROFILE);
+        });
 
         registerPages();
 
         JPanel rightSide = new JPanel(new BorderLayout());
         rightSide.setBackground(AppTheme.BACKGROUND);
-        rightSide.add(new TopHeader(), BorderLayout.NORTH);
+        rightSide.add(topHeader, BorderLayout.NORTH);
         rightSide.add(pageContainer, BorderLayout.CENTER);
 
         add(sidebar, BorderLayout.WEST);
@@ -59,7 +69,7 @@ public class PatientDashboard extends JPanel {
     private void registerPages() {
         pageContainer.add(placeholder("Dashboard — coming soon"), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
-        pageContainer.add(placeholder("Tickets — coming soon"), PAGE_TICKETS);
+        pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
         pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
         pageContainer.add(placeholder("Profile — coming soon"), PAGE_PROFILE);

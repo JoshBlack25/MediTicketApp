@@ -22,12 +22,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-/**
- * Single generic login screen shared by all four user roles (Patient,
- * Doctor, ClinicStaff/Nurse, ClinicStaff/Admin). Role is not chosen here —
- * it's determined after authentication by decoding the JWT (see JwtUtil),
- * and AppFrame is routed to the correct dashboard from there.
- */
+
 public class LoginPanel extends JPanel {
 
     private final AppFrame appFrame;
@@ -35,6 +30,7 @@ public class LoginPanel extends JPanel {
     private LabeledTextField emailField;
     private LabeledPasswordField passwordField;
     private JLabel errorLabel;
+    private PrimaryButton signInButton;
 
     public LoginPanel(AppFrame appFrame) {
         this.appFrame = appFrame;
@@ -43,7 +39,7 @@ public class LoginPanel extends JPanel {
         add(buildFormSection());
     }
 
-    // ── Left: hero section ──────────────────────────────────────
+
 
     private JComponent buildHeroSection() {
         JPanel hero = new JPanel(new GridBagLayout()) {
@@ -82,7 +78,7 @@ public class LoginPanel extends JPanel {
         return hero;
     }
 
-    // ── Right: login form ───────────────────────────────────────
+
 
     private JComponent buildFormSection() {
         JPanel wrapper = new JPanel(new GridBagLayout());
@@ -118,7 +114,7 @@ public class LoginPanel extends JPanel {
         errorLabel.setForeground(AppTheme.STATUS_DANGER);
         errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        PrimaryButton signInButton = new PrimaryButton("Sign In");
+        signInButton = new PrimaryButton("Sign In");
         signInButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         signInButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
         signInButton.addActionListener(e -> onSignIn());
@@ -144,17 +140,8 @@ public class LoginPanel extends JPanel {
         return wrapper;
     }
 
-    /**
-     * Builds a "<plain text> <teal link>" row, e.g. "New patient? Sign up".
-     * Returned as a single JLabel-hosting panel isn't ideal for click
-     * targeting on just the link half, so this uses two adjacent labels
-     * inside a left-aligned FlowLayout instead.
-     */
+
     private JLabel buildLinkRow(String prefix, String linkText, Runnable onClick) {
-        // Implemented as a composite via JPanel would be cleaner for click
-        // isolation; using a single styled JLabel with HTML for simplicity,
-        // wrapping click detection on the whole component since the panel's
-        // FlowLayout below keeps it visually compact.
         JLabel combined = new JLabel(
                 "<html>" + prefix + " <span style='color:#0E7C86;font-weight:bold;'>" + linkText + "</span></html>"
         );
@@ -169,7 +156,6 @@ public class LoginPanel extends JPanel {
         return combined;
     }
 
-    // ── Actions ──────────────────────────────────────────────────
 
     private void onSignIn() {
         String email = emailField.getText().trim();
@@ -179,11 +165,41 @@ public class LoginPanel extends JPanel {
             errorLabel.setText("Please enter both email and password.");
             return;
         }
+
         errorLabel.setText(" ");
+        signInButton.setEnabled(false);
+        signInButton.setText("Signing In...");
 
-        BaseApiClient.ApiResult<AuthResponse> result =
-                ApiClientProvider.getInstance().auth().login(new LoginRequest(email, password));
+        SwingWorker<BaseApiClient.ApiResult<AuthResponse>, Void> worker =
+                new SwingWorker<>() {
+                    @Override
+                    protected BaseApiClient.ApiResult<AuthResponse> doInBackground() {
+                        // Runs off the EDT — safe to block here.
+                        return ApiClientProvider.getInstance().auth().login(new LoginRequest(email, password));
+                    }
 
+                    @Override
+                    protected void done() {
+                        // Back on the EDT automatically — safe to touch Swing components here.
+                        signInButton.setEnabled(true);
+                        signInButton.setText("Sign In");
+
+                        BaseApiClient.ApiResult<AuthResponse> result;
+                        try {
+                            result = get();
+                        } catch (Exception e) {
+                            errorLabel.setText("Something went wrong. Please try again.");
+                            return;
+                        }
+
+                        handleLoginResult(result, email);
+                    }
+                };
+
+        worker.execute();
+    }
+
+    private void handleLoginResult(BaseApiClient.ApiResult<AuthResponse> result, String email) {
         if (!result.isSuccess()) {
             errorLabel.setText(result.getMessage() != null
                     ? "Invalid email or password."
@@ -204,12 +220,15 @@ public class LoginPanel extends JPanel {
 
         ApiClientProvider.getInstance().getBaseApiClient().setAuthToken(token);
 
-        // Fetch full name for the header, since AuthResponse doesn't carry it
+
         if ("CLINIC_STAFF".equals(session.getUserType())) {
             var staff = ApiClientProvider.getInstance().clinicStaff().findByEmail(session.getEmail());
             if (staff.isSuccess()) session.setFullName(staff.getData().getName().getFullName());
+        } else if ("PATIENT".equals(session.getUserType())) {
+            var patient = ApiClientProvider.getInstance().patients().findByEmail(session.getEmail());
+            if (patient.isSuccess()) session.setFullName(patient.getData().getName().getFullName());
         }
-        // (DOCTOR / PATIENT branches unchanged from earlier)
+
 
         if (session.isAdmin()) {
             AdminDashboard dashboard = new AdminDashboard(appFrame);

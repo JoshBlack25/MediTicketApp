@@ -35,8 +35,9 @@ public class AppFrame extends JFrame {
     public static final String SCREEN_NEW_PASSWORD = "NEW_PASSWORD";
     public static final String SCREEN_DOCTOR_DASHBOARD = "DOCTOR_DASHBOARD";
     public static final String SCREEN_PATIENT_DASHBOARD = "PATIENT_DASHBOARD";
+    public static final String SCREEN_NURSE_DASHBOARD = "NURSE_DASHBOARD";
 
-    // CLINIC_STAFF_DASHBOARD, etc.) get added here as those screens are built.
+    // Remaining role dashboards get added here as those screens are built.
 
     private final CardLayout cardLayout;
     private final JPanel contentContainer;
