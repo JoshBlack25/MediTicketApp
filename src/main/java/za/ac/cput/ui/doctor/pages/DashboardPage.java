@@ -1,4 +1,3 @@
-// za.ac.cput.ui.doctor.pages.DashboardPage
 package za.ac.cput.ui.doctor.pages;
 
 import za.ac.cput.api.ApiClientProvider;

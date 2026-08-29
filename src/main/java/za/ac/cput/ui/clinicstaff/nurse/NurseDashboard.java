@@ -3,9 +3,7 @@ package za.ac.cput.ui.clinicstaff.nurse;
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.AppFrame;
-import za.ac.cput.ui.clinicstaff.nurse.pages.AppointmentsPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.PaymentsPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.TicketsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.*;
 import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
 import za.ac.cput.ui.layout.TopHeader;
@@ -86,11 +84,11 @@ public class NurseDashboard extends JPanel {
     private void registerPages() {
         pageContainer.add(placeholder("Nurse home is not built yet."), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
-        pageContainer.add(placeholder("Patients is not built yet."), PAGE_PATIENTS);
+        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(placeholder("Notifications is not built yet."), PAGE_NOTIFICATIONS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
-        pageContainer.add(placeholder("Profile is not built yet."), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {
