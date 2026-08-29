@@ -23,12 +23,14 @@ public class DoctorDashboard extends JPanel {
     private Sidebar sidebar;
     private TopHeader topHeader;
 
-    private static final String PAGE_HOME = "HOME";
-    private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
-    private static final String PAGE_TICKETS = "TICKETS";
-    private static final String PAGE_PATIENTS = "PATIENTS";
-    private static final String PAGE_NOTIFICATIONS = "NOTIFICATIONS";
-    private static final String PAGE_PROFILE = "PROFILE";
+    // Public so DashboardPage's quick-action buttons can reference these
+    // keys directly instead of duplicating string literals.
+    public static final String PAGE_HOME = "HOME";
+    public static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
+    public static final String PAGE_TICKETS = "TICKETS";
+    public static final String PAGE_PATIENTS = "PATIENTS";
+    public static final String PAGE_NOTIFICATIONS = "NOTIFICATIONS";
+    public static final String PAGE_PROFILE = "PROFILE";
 
     public DoctorDashboard(AppFrame appFrame) {
         this.appFrame = appFrame;
@@ -67,7 +69,7 @@ public class DoctorDashboard extends JPanel {
     }
 
     private void registerPages() {
-        pageContainer.add(placeholder("Dashboard — coming soon"), PAGE_HOME);
+        pageContainer.add(new DashboardPage(this::navigateFromHome), PAGE_HOME);
         pageContainer.add(placeholder("Appointments — coming soon"), PAGE_APPOINTMENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(placeholder("Patients — coming soon"), PAGE_PATIENTS);
@@ -87,6 +89,17 @@ public class DoctorDashboard extends JPanel {
 
     private void showPage(String key) {
         pageLayout.show(pageContainer, key);
+    }
+
+    /**
+     * Passed into DashboardPage so its quick-action buttons ("View
+     * Appointments", "View Tickets", etc.) can jump to another tab and
+     * keep the sidebar's selected state in sync — same pattern already
+     * used for the profile-avatar click in TopHeader above.
+     */
+    private void navigateFromHome(String pageKey) {
+        sidebar.select(pageKey);
+        showPage(pageKey);
     }
 
     private void onLogout() {
