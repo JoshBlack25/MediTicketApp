@@ -11,12 +11,7 @@ import za.ac.cput.ui.theme.*;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Step 3. Requires the resetSessionToken from VerifyResetCodePanel —
- * there's no way to reach this screen's submit action with just an email
- * and a guessed code, since the token only exists after a real successful
- * verify-code call (see setResetContext()).
- */
+
 public class NewPasswordPanel extends JPanel {
 
     private final AppFrame appFrame;

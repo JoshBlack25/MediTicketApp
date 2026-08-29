@@ -175,8 +175,10 @@ public class DoctorSignupPanel extends JPanel {
         BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance().auth().signupDoctor(request);
 
         if (result.isSuccess()) {
+            String signedUpEmail = emailValueLabel.getText();
             clearForm();
-            appFrame.showScreen(AppFrame.SCREEN_EMPLOYEE_SIGNUP_SUCCESS);
+            appFrame.getSignupVerifyCodePanel().setEmail(signedUpEmail);
+            appFrame.showScreen(AppFrame.SCREEN_SIGNUP_VERIFY);
         } else {
             errorLabel.setText(result.getMessage() != null ? result.getMessage() : "Signup failed.");
         }

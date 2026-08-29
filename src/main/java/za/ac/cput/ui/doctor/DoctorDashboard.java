@@ -8,7 +8,6 @@ import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
 import za.ac.cput.ui.layout.TopHeader;
 import za.ac.cput.ui.theme.AppTheme;
-import za.ac.cput.ui.theme.FontManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -48,8 +47,7 @@ public class DoctorDashboard extends JPanel {
 
         sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
 
-        // Header must exist before registerPages(), since ProfilePage needs
-        // topHeader::refreshProfile to notify it of name/avatar changes.
+
         topHeader = new TopHeader(() -> {
             sidebar.select(PAGE_PROFILE);
             showPage(PAGE_PROFILE);
@@ -69,22 +67,12 @@ public class DoctorDashboard extends JPanel {
     }
 
     private void registerPages() {
-        pageContainer.add(new DashboardPage(this::navigateFromHome), PAGE_HOME);
-        pageContainer.add(placeholder("Appointments — coming soon"), PAGE_APPOINTMENTS);
+        pageContainer.add(new DashboardPage(), PAGE_HOME);
+        pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
-        pageContainer.add(placeholder("Patients — coming soon"), PAGE_PATIENTS);
-        pageContainer.add(placeholder("Notifications — coming soon"), PAGE_NOTIFICATIONS);
-        pageContainer.add(placeholder("Profile — coming soon"), PAGE_PROFILE);
-    }
-
-    private JComponent placeholder(String message) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(AppTheme.BACKGROUND);
-        JLabel label = new JLabel(message);
-        label.setFont(FontManager.bodyFont(Font.PLAIN, 15));
-        label.setForeground(AppTheme.TEXT_SECONDARY);
-        panel.add(label);
-        return panel;
+        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
+        pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private void showPage(String key) {

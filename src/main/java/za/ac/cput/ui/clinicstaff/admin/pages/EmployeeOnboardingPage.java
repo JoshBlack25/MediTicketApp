@@ -192,9 +192,7 @@ public class EmployeeOnboardingPage extends JPanel {
         }
     }
 
-    // Note: RowClickHelper's idColumn lookup reads table.getValueAt(row, idColumn),
-    // which still works correctly after removeColumn() — that call operates on the
-    // TableColumnModel (view), not the underlying TableModel the id data lives in.
+
     private void openDetails(int requestId) {
         currentRequests.stream()
                 .filter(r -> r.getRequestId() == requestId)

@@ -8,15 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Read-only detail view for a single notification, opened by clicking a
- * card in NotificationsPage's history list. "Send Follow-up" doesn't
- * reply in any real sense (notifications aren't threaded — no parent/child
- * relationship exists in the backend, and recipients have no channel to
- * reply through anyway); it just pre-fills the compose form with the same
- * ticket already selected, so the caller can quickly log a related note
- * without re-picking the ticket from scratch.
- */
+
 public class NotificationDetailsDialog {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");
@@ -83,8 +75,7 @@ public class NotificationDetailsDialog {
         close.addActionListener(e -> dialog.dispose());
         buttonRow.add(close);
 
-        // Only offer a follow-up if this notification is actually tied to
-        // a ticket — nothing to pre-fill against otherwise.
+
         if (notification.getTicket() != null) {
             JButton followUp = new JButton("Send Follow-up");
             followUp.setFont(FontManager.bodyFont(Font.BOLD, 13));

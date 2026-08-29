@@ -12,13 +12,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Doctor's ticket detail view. Owns the consultation-progression CTAs —
- * OPEN shows "Start Consultation" (single click, IN_PROGRESS); IN_PROGRESS
- * shows "Complete Consultation" (opens CompleteConsultationDialog, requires
- * notes, RESOLVED). RESOLVED is read-only from here — payment is entirely
- * a clinic-staff/patient concern from this point on.
- */
+
 public class TicketDetailsDialog {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");

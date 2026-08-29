@@ -15,17 +15,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Modal detail view for a single ticket. Shows patient/doctor/appointment
- * context, full status history, and — only when the ticket is RESOLVED and
- * no Payment row exists yet for its appointment — a "Generate Payment
- * Request" action.
- *
- * Payment confirmation ("Mark as Paid") depends on payment method: EFT is
- * settled entirely by the patient via self-checkout (their own Payments
- * page); CASH, CARD, and MEDICAL_AID are collected in person, so staff
- * confirm those here once received.
- */
+
 public class TicketDetailsDialog {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");
@@ -151,8 +141,7 @@ public class TicketDetailsDialog {
         dialog.setVisible(true);
     }
 
-    // Flipping to PAID triggers PaymentService.closeTicketIfPaid() server-side
-    // automatically — no separate "close ticket" call needed here.
+
     private static void markAsPaid(JDialog dialog, Component parent, Payment payment, Runnable onChanged) {
         int confirm = JOptionPane.showConfirmDialog(dialog,
                 "Confirm that payment of R" + formatAmount(payment.getPaymentAmount())

@@ -10,15 +10,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Resolving a ticket requires a notes/diagnosis summary — unlike "Start
- * Consultation" (a single click), ending a consultation with zero record
- * of what happened is a real clinical-record gap, so this is intentionally
- * not a one-click action. Resolving here also triggers the backend's
- * auto-complete-appointment hook (PatientTicketService.progressStatus),
- * so the linked Appointment flips to COMPLETED as a side effect — nothing
- * else needs to happen on this screen for that to occur.
- */
+
 public class CompleteConsultationDialog {
 
     public static void show(Component parent, PatientTicket ticket, Runnable onCompleted) {

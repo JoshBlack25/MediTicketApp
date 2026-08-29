@@ -9,13 +9,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Read-only ticket detail view for patients. No actions live here —
- * payment settlement happens on the patient's own Payments page
- * (see FakeCheckoutDialog), and consultation progress is entirely
- * doctor-driven. This dialog exists purely so patients can see their
- * ticket status history.
- */
+
 public class TicketDetailsDialog {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");

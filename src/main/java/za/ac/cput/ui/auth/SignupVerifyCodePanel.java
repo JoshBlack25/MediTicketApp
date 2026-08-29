@@ -2,8 +2,6 @@ package za.ac.cput.ui.auth;
 
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
-import za.ac.cput.model.auth.ForgotPasswordRequest;
-import za.ac.cput.model.auth.VerifyResetCodeRequest;
 import za.ac.cput.ui.AppFrame;
 import za.ac.cput.ui.auth.components.LabeledTextField;
 import za.ac.cput.ui.auth.components.PrimaryButton;
@@ -14,8 +12,12 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-
-public class VerifyResetCodePanel extends JPanel {
+/**
+ * Mirrors VerifyResetCodePanel's exact pattern, for signup verification
+ * instead of password reset — same 6-digit-code UX, different endpoint
+ * underneath (AuthApiClient#verify instead of #verifyResetCode).
+ */
+public class SignupVerifyCodePanel extends JPanel {
 
     private final AppFrame appFrame;
     private String email;
@@ -24,7 +26,7 @@ public class VerifyResetCodePanel extends JPanel {
     private LabeledTextField codeField;
     private JLabel errorLabel;
 
-    public VerifyResetCodePanel(AppFrame appFrame) {
+    public SignupVerifyCodePanel(AppFrame appFrame) {
         this.appFrame = appFrame;
         setLayout(new GridBagLayout());
         setBackground(AppTheme.BACKGROUND);
@@ -51,7 +53,7 @@ public class VerifyResetCodePanel extends JPanel {
         ));
         card.setPreferredSize(new Dimension(440, 340));
 
-        JLabel title = new JLabel("Check Your Email");
+        JLabel title = new JLabel("Verify Your Account");
         title.setFont(FontManager.headlineFont(Font.BOLD, 24));
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -72,7 +74,7 @@ public class VerifyResetCodePanel extends JPanel {
         errorLabel.setForeground(AppTheme.STATUS_DANGER);
         errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        PrimaryButton verifyButton = new PrimaryButton("Verify Code");
+        PrimaryButton verifyButton = new PrimaryButton("Verify Account");
         verifyButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         verifyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
         verifyButton.addActionListener(e -> onVerify());
@@ -120,25 +122,24 @@ public class VerifyResetCodePanel extends JPanel {
         }
         errorLabel.setText(" ");
 
-        BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance()
-                .auth().verifyResetCode(new VerifyResetCodeRequest(email, code));
+        BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance().auth().verify(code);
 
         if (result.isSuccess()) {
-            String sessionToken = result.getData();
-            appFrame.getNewPasswordPanel().setResetContext(email, sessionToken);
-            appFrame.showScreen(AppFrame.SCREEN_NEW_PASSWORD);
+            errorLabel.setForeground(AppTheme.STATUS_SUCCESS);
+            errorLabel.setText("Account verified! You can now log in.");
+            appFrame.showScreen(AppFrame.SCREEN_LOGIN);
         } else {
+            errorLabel.setForeground(AppTheme.STATUS_DANGER);
             errorLabel.setText(result.getMessage() != null ? result.getMessage() : "Invalid or expired code.");
         }
     }
 
     private void onResend() {
         if (email == null || email.isBlank()) {
-            appFrame.showScreen(AppFrame.SCREEN_FORGOT_PASSWORD);
+            appFrame.showScreen(AppFrame.SCREEN_LOGIN);
             return;
         }
-        BaseApiClient.ApiResult<String> result =
-                ApiClientProvider.getInstance().auth().forgotPassword(new ForgotPasswordRequest(email));
+        BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance().auth().resendVerification(email);
 
         if (result.isSuccess()) {
             errorLabel.setForeground(AppTheme.STATUS_SUCCESS);
@@ -147,12 +148,5 @@ public class VerifyResetCodePanel extends JPanel {
             errorLabel.setForeground(AppTheme.STATUS_DANGER);
             errorLabel.setText("Something went wrong. Please try again.");
         }
-    }
-
-    // Small helper since AppFrame doesn't currently expose a getter for
-    // NewPasswordPanel the way it does for VerifyResetCodePanel — see
-    // note in AppFrame wiring instructions below for the cleaner fix.
-    private Component findNewPasswordPanel() {
-        return appFrame.getNewPasswordPanel();
     }
 }

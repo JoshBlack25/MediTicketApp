@@ -16,19 +16,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-/**
- * Fake checkout — no real payment gateway integration exists. Collects
- * cosmetic card details (never sent anywhere, never stored) purely to
- * simulate the feel of paying, then flips the Payment to PAID via the
- * same PaymentApiClient.update() call the old admin "Mark as Paid" used.
- * The backend's auto-close hook (PaymentService) doesn't care who
- * triggered it, so no backend changes were needed to move this action
- * from staff to patient.
- *
- * The three inputs are reformatted as they are typed (card number grouped
- * in fours, expiry slashed as MM/YY, CVV capped at three digits) via
- * DocumentFilters rather than key listeners, so paste and backspace behave.
- */
+
 public class FakeCheckoutDialog {
 
     public static void show(Component parent, Payment payment, Runnable onPaid) {
@@ -194,9 +182,7 @@ public class FakeCheckoutDialog {
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
         wrapper.setOpaque(false);
-        // Returning just the field for simplicity in the caller's layout —
-        // caller adds the field directly; label omitted here intentionally
-        // since amountLabel-style headers are used elsewhere in this dialog.
+
         JTextField field = new JTextField();
         field.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         field.putClientProperty("JTextField.placeholderText", placeholder);
@@ -231,15 +217,7 @@ public class FakeCheckoutDialog {
         return block;
     }
 
-    // ── Input formatting ──────────────────────────────────────────
 
-    /**
-     * Reformats a digits-only field while the user types. This works at the
-     * Document level rather than on key events so that pasting, backspacing
-     * and clicking into the middle of the field all behave correctly. After
-     * reformatting, the caret is re-anchored by digit index — without that it
-     * jumps to the end of the field on every keystroke.
-     */
     private static class DigitFilter extends DocumentFilter {
 
         private final JTextField field;
@@ -307,7 +285,6 @@ public class FakeCheckoutDialog {
         return digits.length() <= 2 ? digits : digits.substring(0, 2) + "/" + digits.substring(2);
     }
 
-    /** Maps a digit index back to a caret offset in the formatted text. */
     private static int caretPositionFor(String formatted, int digitIndex) {
         if (digitIndex <= 0) return 0;
         int seen = 0;
@@ -317,7 +294,6 @@ public class FakeCheckoutDialog {
         return formatted.length();
     }
 
-    /** Standard issuer ranges: Visa starts 4, Mastercard 51-55 or 2221-2720. */
     private static String detectBrand(String digits) {
         if (digits.isEmpty()) return null;
         if (digits.charAt(0) == '4') return "VISA";
@@ -332,15 +308,8 @@ public class FakeCheckoutDialog {
         return null;
     }
 
-    // ── Card brand marks ──────────────────────────────────────────
 
-    /**
-     * Visa and Mastercard marks drawn with Java2D. Swing cannot render SVG,
-     * and pulling in an SVG library would mean a new Maven dependency for two
-     * small graphics — so these are hand-drawn approximations of the brands'
-     * artwork, not the official assets. Both sit dimmed until the card number
-     * identifies one of them, the way a real checkout does.
-     */
+
     private static class CardBrandStrip extends JComponent {
 
         private static final int BADGE_W = 40;
