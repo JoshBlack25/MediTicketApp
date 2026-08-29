@@ -165,7 +165,6 @@ public class DashboardPage extends JPanel {
     }
 
     private void replaceSectionBody(JPanel section, List<JComponent> rows) {
-        // Keep the title (index 0), replace everything after it
         while (section.getComponentCount() > 1) {
             section.remove(1);
         }
@@ -177,10 +176,7 @@ public class DashboardPage extends JPanel {
         section.repaint();
     }
 
-    // ── Data loading ─────────────────────────────────────────────
-    // Kept on the EDT for simplicity — these are lightweight local
-    // backend calls. If this ever feels sluggish, move each ApiClient
-    // call to a SwingWorker so the UI doesn't block on the network.
+
 
     private void loadData() {
         List<Doctor> doctors = List.of();
@@ -213,8 +209,7 @@ public class DashboardPage extends JPanel {
         renderClinicActivity(appointments);
         renderStaffOverview(doctors.size(), (int) nurseCount, totalStaff);
         renderOnboardingOverview(pendingRequests);
-        // Recent Activity has no dedicated backend feed yet — left as a
-        // static placeholder until an activity-log endpoint exists.
+
     }
 
     private String loadNotificationCount() {

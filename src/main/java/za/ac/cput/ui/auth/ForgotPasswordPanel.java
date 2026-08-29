@@ -13,13 +13,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-/**
- * Step 1 of the reset flow. Always shows the same generic message
- * regardless of whether the email exists — matches the backend's
- * account-enumeration protection (PasswordResetService.requestReset
- * always returns true). This screen shouldn't reveal anything more than
- * "check your inbox."
- */
+
 public class ForgotPasswordPanel extends JPanel {
 
     private final AppFrame appFrame;
@@ -109,9 +103,7 @@ public class ForgotPasswordPanel extends JPanel {
             emailField.getField().setText("");
             appFrame.showScreen(AppFrame.SCREEN_VERIFY_RESET_CODE);
         } else {
-            // Backend always returns 200 on this endpoint per its
-            // enumeration-safety design, so a failure here means a real
-            // network/server problem, not "email not found."
+
             errorLabel.setText("Something went wrong. Please try again.");
         }
     }

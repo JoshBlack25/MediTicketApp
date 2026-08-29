@@ -1,3 +1,12 @@
+/*
+ PaymentsPage.java
+
+ Patient Payments Page — view and settle outstanding balances.
+
+ Author: Abdullahi Farah (230971091)
+
+ Date: 23 August 2026
+*/
 package za.ac.cput.ui.patient.pages;
 
 import za.ac.cput.api.ApiClientProvider;
@@ -6,7 +15,9 @@ import za.ac.cput.model.domain.Appointment;
 import za.ac.cput.model.domain.Payment;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.patient.components.FakeCheckoutDialog;
+import za.ac.cput.ui.patient.components.MedicalAidDialog;
 import za.ac.cput.ui.layout.RowClickHelper;
+import za.ac.cput.ui.patient.components.PaymentReceiptDialog;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -17,13 +28,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * No findByPatient endpoint exists on PaymentApiClient, so payments are
- * loaded via getAll() and filtered client-side to those whose
- * appointment.patient.userId matches the logged-in patient — same
- * pattern as Doctor's Tickets page. Clicking a PENDING row opens the fake
- * checkout flow; clicking anything else just shows a read-only receipt.
- */
+
 public class PaymentsPage extends JPanel {
 
     private DefaultTableModel tableModel;
@@ -149,6 +154,8 @@ public class PaymentsPage extends JPanel {
         if ("PENDING".equals(payment.getPaymentStatus())) {
             if ("EFT".equals(payment.getPaymentMethod())) {
                 FakeCheckoutDialog.show(this, payment, this::loadData);
+            } else if ("MEDICAL_AID".equals(payment.getPaymentMethod())) {
+                MedicalAidDialog.show(this, payment);
             } else {
                 JOptionPane.showMessageDialog(this,
                         "This payment is set to be settled at the clinic by " +
@@ -163,8 +170,9 @@ public class PaymentsPage extends JPanel {
             if (retry == JOptionPane.YES_OPTION) {
                 FakeCheckoutDialog.show(this, payment, this::loadData);
             }
+        } else if ("PAID".equals(payment.getPaymentStatus()) || "REFUNDED".equals(payment.getPaymentStatus())) {
+            PaymentReceiptDialog.show(this, payment);
         }
-        // PAID/REFUNDED: no action — could add a read-only receipt dialog later.
     }
 
     private String methodDisplayName(String method) {
@@ -177,7 +185,7 @@ public class PaymentsPage extends JPanel {
         };
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+
 
     private void loadData() {
         int patientId = SessionManager.getInstance().getUserId();
@@ -230,3 +238,4 @@ public class PaymentsPage extends JPanel {
         return myPayments.stream().filter(p -> p.getPaymentId() == paymentId).findFirst().orElse(null);
     }
 }
+

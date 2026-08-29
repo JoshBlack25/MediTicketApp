@@ -8,13 +8,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Read-only view for a single staff member (Doctor or ClinicStaff).
- * No Edit action yet — ClinicStaffService.create() bypassing factory
- * validation is a known backend gap, and there's no update-staff endpoint
- * wired anywhere in the frontend yet, so editing is intentionally left out
- * until that's sorted rather than built against a shaky backend path.
- */
+
 public class StaffDetailsDialog {
 
     public static void showDoctor(Component parent, Doctor doctor) {

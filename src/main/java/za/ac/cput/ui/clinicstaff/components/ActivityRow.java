@@ -26,7 +26,6 @@ public class ActivityRow extends JPanel {
         add(valueComp, BorderLayout.EAST);
     }
 
-    /** Simple text-only row, used for "Recent Activity" feed entries. */
     public static JComponent textRow(String text) {
         JLabel label = new JLabel("• " + text);
         label.setFont(FontManager.bodyFont(Font.PLAIN, 13));
