@@ -11,6 +11,7 @@ import za.ac.cput.ui.auth.components.LabeledPasswordField;
 import za.ac.cput.ui.auth.components.LabeledTextField;
 import za.ac.cput.ui.auth.components.PrimaryButton;
 import za.ac.cput.ui.clinicstaff.admin.AdminDashboard;
+import za.ac.cput.ui.clinicstaff.nurse.NurseDashboard;
 import za.ac.cput.ui.doctor.DoctorDashboard;
 import za.ac.cput.ui.patient.PatientDashboard;
 import za.ac.cput.ui.theme.AppTheme;
@@ -242,8 +243,12 @@ public class LoginPanel extends JPanel {
             PatientDashboard dashboard = new PatientDashboard(appFrame);
             appFrame.addScreen(AppFrame.SCREEN_PATIENT_DASHBOARD, dashboard);
             appFrame.showScreen(AppFrame.SCREEN_PATIENT_DASHBOARD);
+        } else if ("CLINIC_STAFF".equals(session.getUserType())) {
+            // NURSE — the only non-admin CLINIC_STAFF role right now.
+            NurseDashboard dashboard = new NurseDashboard(appFrame);
+            appFrame.addScreen(AppFrame.SCREEN_NURSE_DASHBOARD, dashboard);
+            appFrame.showScreen(AppFrame.SCREEN_NURSE_DASHBOARD);
         } else {
-            // NURSE (CLINIC_STAFF, non-admin) — no dashboard built yet
             JOptionPane.showMessageDialog(this, "Logged in as " + session.getUserType()
                     + " — dashboard not built yet.", "Login OK", JOptionPane.INFORMATION_MESSAGE);
         }

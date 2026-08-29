@@ -67,12 +67,12 @@ public class PatientDashboard extends JPanel {
     }
 
     private void registerPages() {
-        pageContainer.add(placeholder("Dashboard — coming soon"), PAGE_HOME);
+        pageContainer.add(new DashboardPage(), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
         pageContainer.add(placeholder("Notifications — coming soon"), PAGE_NOTIFICATIONS);
-        pageContainer.add(placeholder("Profile — coming soon"), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {

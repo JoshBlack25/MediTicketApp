@@ -16,19 +16,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Doctor's core workflow page. No findByDoctor endpoint exists on
- * PatientTicketApiClient, so tickets are loaded via getAll() and filtered
- * client-side to those whose appointment.doctor.userId matches the
- * logged-in doctor.
- *
- * Row-click pattern (matches every other role's Tickets page): clicking a
- * row opens TicketDetailsDialog, which owns the Start/Complete Consultation
- * CTAs conditionally based on status. No Action column.
- *
- * CLOSED tickets are excluded entirely — not part of the doctor's active
- * working queue.
- */
+
 public class TicketsPage extends JPanel {
 
     private SummaryCard openCard, inProgressCard, resolvedCard;
@@ -185,7 +173,6 @@ public class TicketsPage extends JPanel {
         }
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         int doctorId = SessionManager.getInstance().getUserId();

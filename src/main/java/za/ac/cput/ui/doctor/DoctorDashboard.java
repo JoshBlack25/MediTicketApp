@@ -8,7 +8,6 @@ import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
 import za.ac.cput.ui.layout.TopHeader;
 import za.ac.cput.ui.theme.AppTheme;
-import za.ac.cput.ui.theme.FontManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -23,14 +22,12 @@ public class DoctorDashboard extends JPanel {
     private Sidebar sidebar;
     private TopHeader topHeader;
 
-    // Public so DashboardPage's quick-action buttons can reference these
-    // keys directly instead of duplicating string literals.
-    public static final String PAGE_HOME = "HOME";
-    public static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
-    public static final String PAGE_TICKETS = "TICKETS";
-    public static final String PAGE_PATIENTS = "PATIENTS";
-    public static final String PAGE_NOTIFICATIONS = "NOTIFICATIONS";
-    public static final String PAGE_PROFILE = "PROFILE";
+    private static final String PAGE_HOME = "HOME";
+    private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
+    private static final String PAGE_TICKETS = "TICKETS";
+    private static final String PAGE_PATIENTS = "PATIENTS";
+    private static final String PAGE_NOTIFICATIONS = "NOTIFICATIONS";
+    private static final String PAGE_PROFILE = "PROFILE";
 
     public DoctorDashboard(AppFrame appFrame) {
         this.appFrame = appFrame;
@@ -48,8 +45,7 @@ public class DoctorDashboard extends JPanel {
 
         sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
 
-        // Header must exist before registerPages(), since ProfilePage needs
-        // topHeader::refreshProfile to notify it of name/avatar changes.
+
         topHeader = new TopHeader(() -> {
             sidebar.select(PAGE_PROFILE);
             showPage(PAGE_PROFILE);
@@ -69,37 +65,16 @@ public class DoctorDashboard extends JPanel {
     }
 
     private void registerPages() {
-        pageContainer.add(new DashboardPage(this::navigateFromHome), PAGE_HOME);
-        pageContainer.add(placeholder("Appointments — coming soon"), PAGE_APPOINTMENTS);
+        pageContainer.add(new DashboardPage(), PAGE_HOME);
+        pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
-        pageContainer.add(placeholder("Patients — coming soon"), PAGE_PATIENTS);
-        pageContainer.add(placeholder("Notifications — coming soon"), PAGE_NOTIFICATIONS);
-        pageContainer.add(placeholder("Profile — coming soon"), PAGE_PROFILE);
-    }
-
-    private JComponent placeholder(String message) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(AppTheme.BACKGROUND);
-        JLabel label = new JLabel(message);
-        label.setFont(FontManager.bodyFont(Font.PLAIN, 15));
-        label.setForeground(AppTheme.TEXT_SECONDARY);
-        panel.add(label);
-        return panel;
+        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
+        pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private void showPage(String key) {
         pageLayout.show(pageContainer, key);
-    }
-
-    /**
-     * Passed into DashboardPage so its quick-action buttons ("View
-     * Appointments", "View Tickets", etc.) can jump to another tab and
-     * keep the sidebar's selected state in sync — same pattern already
-     * used for the profile-avatar click in TopHeader above.
-     */
-    private void navigateFromHome(String pageKey) {
-        sidebar.select(pageKey);
-        showPage(pageKey);
     }
 
     private void onLogout() {

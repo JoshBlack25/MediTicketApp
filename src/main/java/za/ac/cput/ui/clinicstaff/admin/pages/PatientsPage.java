@@ -1,4 +1,4 @@
-package za.ac.cput.ui.clinicstaff.nurse.pages;
+package za.ac.cput.ui.clinicstaff.admin.pages;
 
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
