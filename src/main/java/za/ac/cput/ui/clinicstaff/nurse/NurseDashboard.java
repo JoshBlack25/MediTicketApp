@@ -4,7 +4,11 @@ import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.AppFrame;
 import za.ac.cput.ui.clinicstaff.nurse.pages.AppointmentsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.DashboardPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.NotificationsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.PatientsPage;
 import za.ac.cput.ui.clinicstaff.nurse.pages.PaymentsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.ProfilePage;
 import za.ac.cput.ui.clinicstaff.nurse.pages.TicketsPage;
 import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
@@ -20,14 +24,6 @@ import java.util.List;
  * Shell for the NURSE role, mirroring AdminDashboard: a role-agnostic
  * Sidebar on the left, a TopHeader and a CardLayout page container on the
  * right, with logout clearing both the auth token and the session.
- *
- * Only Appointments, Tickets and Payments exist as real pages in
- * clinicstaff.nurse.pages — Home, Patients, Notifications and Profile are
- * still empty stubs that do not extend JPanel, so they cannot be added to
- * the CardLayout. Those four navigate to a placeholder instead, following
- * the approach AppFrame documents for screens that aren't built yet: the
- * app stays runnable end-to-end rather than only compiling once every page
- * exists. Swap each placeholder(...) for the real page as it lands.
  */
 public class NurseDashboard extends JPanel {
 
@@ -84,13 +80,13 @@ public class NurseDashboard extends JPanel {
     }
 
     private void registerPages() {
-        pageContainer.add(placeholder("Nurse home is not built yet."), PAGE_HOME);
+        pageContainer.add(new DashboardPage(this), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
-        pageContainer.add(placeholder("Patients is not built yet."), PAGE_PATIENTS);
+        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
-        pageContainer.add(placeholder("Notifications is not built yet."), PAGE_NOTIFICATIONS);
+        pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
-        pageContainer.add(placeholder("Profile is not built yet."), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {
@@ -105,6 +101,17 @@ public class NurseDashboard extends JPanel {
 
     private void showPage(String key) {
         pageLayout.show(pageContainer, key);
+    }
+
+    /** Lets pages (e.g. DashboardPage's quick actions) navigate the shell. */
+    public void navigateTo(String pageKey) {
+        sidebar.select(pageKey);
+        showPage(pageKey);
+    }
+
+    /** Lets pages update the unread-notifications badge in the header. */
+    public void setHeaderUnreadCount(int count) {
+        topHeader.setUnreadCount(count);
     }
 
     private void onLogout() {
