@@ -14,13 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Approving an appointment requires assigning a doctor at the same time
- * (AppointmentController#approve takes both doctorId and staffId) — so this
- * can't be a one-click table action like Tickets' inline Approve/Reject.
- * staffId is always the currently logged-in admin/nurse (SessionManager),
- * never chosen by the user.
- */
+
 public class ApproveAppointmentDialog {
 
     public static void show(Component parent, Appointment appointment, Runnable onApproved) {

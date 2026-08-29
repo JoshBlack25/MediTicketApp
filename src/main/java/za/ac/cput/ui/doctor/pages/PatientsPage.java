@@ -5,8 +5,9 @@ import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.Appointment;
 import za.ac.cput.model.domain.Patient;
 import za.ac.cput.session.SessionManager;
-import za.ac.cput.ui.clinicstaff.components.PatientDetailsDialog;
 import za.ac.cput.ui.clinicstaff.components.SummaryCard;
+import za.ac.cput.ui.doctor.components.PatientDetailsDialog;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -21,14 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * The doctor's own patient roster — derived from findByDoctor(doctorId)
- * appointments rather than a dedicated "patients of this doctor" endpoint
- * (none exists server-side), deduplicated by patient userId so someone
- * with 5 appointments only shows up once. Read-only: reuses the admin
- * side's PatientDetailsDialog directly, since a doctor has no business
- * editing patient records from here.
- */
+
 public class PatientsPage extends JPanel {
 
     private SummaryCard totalPatientsCard, appointmentsThisMonthCard;
@@ -125,10 +119,11 @@ public class PatientsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"Name", "Email", "Phone", "Action"};
+        // ID column stays in the model for RowClickHelper, hidden from view.
+        String[] columns = {"Name", "Email", "Phone", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 3; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         patientsTable = new JTable(tableModel);
         patientsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -136,16 +131,25 @@ public class PatientsPage extends JPanel {
         patientsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         patientsTable.setShowGrid(false);
         patientsTable.setIntercellSpacing(new Dimension(0, 0));
-        patientsTable.getColumnModel().getColumn(3).setCellRenderer(new ActionCellRenderer());
-        patientsTable.getColumnModel().getColumn(3).setCellEditor(new ActionCellEditor());
-        patientsTable.getColumnModel().getColumn(3).setPreferredWidth(90);
-        patientsTable.getColumnModel().getColumn(3).setMinWidth(90);
+        patientsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        patientsTable.getColumnModel().getColumn(3).setMinWidth(0);
+        patientsTable.getColumnModel().getColumn(3).setMaxWidth(0);
+        patientsTable.getColumnModel().getColumn(3).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(patientsTable, 3, this::onRowClicked);
 
         JScrollPane scroll = new JScrollPane(patientsTable);
         scroll.setPreferredSize(new Dimension(0, 400));
         scroll.setBorder(BorderFactory.createLineBorder(AppTheme.DIVIDER));
         scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         return scroll;
+    }
+
+    private void onRowClicked(int patientId) {
+        Patient patient = myPatients.stream().filter(p -> p.getUserId() == patientId).findFirst().orElse(null);
+        if (patient == null) return;
+        PatientDetailsDialog.show(this, patient);
     }
 
     // ── Data loading ──────────────────────────────────────────────
@@ -193,13 +197,12 @@ public class PatientsPage extends JPanel {
         tableModel.setRowCount(0);
         List<Patient> filtered = currentFilteredRows();
 
-        for (int i = 0; i < filtered.size(); i++) {
-            Patient p = filtered.get(i);
+        for (Patient p : filtered) {
             tableModel.addRow(new Object[]{
                     fullName(p).isBlank() ? "\u2014" : fullName(p),
                     p.getEmail() != null ? p.getEmail() : "\u2014",
                     p.getCellPhone() != null ? p.getCellPhone() : "\u2014",
-                    i // row index into the filtered list, used by the action column
+                    p.getUserId()
             });
         }
     }
@@ -209,62 +212,5 @@ public class PatientsPage extends JPanel {
         String first = p.getName().getFirstName();
         String last = p.getName().getLastName();
         return (first != null ? first : "") + " " + (last != null ? last : "");
-    }
-
-    // ── Table action column ──────────────────────────────────────
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-            add(smallButton("View"));
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-        private int currentIndex;
-
-        ActionCellEditor() {
-            JButton view = smallButton("View");
-            view.addActionListener(e -> {
-                fireEditingStopped();
-                List<Patient> filtered = currentFilteredRows();
-                if (currentIndex >= 0 && currentIndex < filtered.size()) {
-                    Patient patient = filtered.get(currentIndex);
-                    SwingUtilities.invokeLater(() -> PatientDetailsDialog.show(PatientsPage.this, patient));
-                }
-            });
-            panel.add(view);
-            panel.setBackground(AppTheme.SURFACE);
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            if (row < 0 || row >= tableModel.getRowCount()) return panel;
-            Object idxValue = tableModel.getValueAt(row, 3);
-            currentIndex = idxValue != null ? (int) idxValue : -1;
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return currentIndex; }
-    }
-
-    private JButton smallButton(String text) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(AppTheme.PRIMARY);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(AppTheme.PRIMARY, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 8, 2, 8));
-        return button;
     }
 }

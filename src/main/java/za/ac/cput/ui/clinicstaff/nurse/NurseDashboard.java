@@ -1,9 +1,11 @@
-package za.ac.cput.ui.clinicstaff.admin;
+package za.ac.cput.ui.clinicstaff.nurse;
 
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.AppFrame;
-import za.ac.cput.ui.clinicstaff.admin.pages.*;
+import za.ac.cput.ui.clinicstaff.nurse.pages.AppointmentsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.PaymentsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.TicketsPage;
 import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
 import za.ac.cput.ui.layout.TopHeader;
@@ -14,7 +16,20 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-public class AdminDashboard extends JPanel {
+/**
+ * Shell for the NURSE role, mirroring AdminDashboard: a role-agnostic
+ * Sidebar on the left, a TopHeader and a CardLayout page container on the
+ * right, with logout clearing both the auth token and the session.
+ *
+ * Only Appointments, Tickets and Payments exist as real pages in
+ * clinicstaff.nurse.pages — Home, Patients, Notifications and Profile are
+ * still empty stubs that do not extend JPanel, so they cannot be added to
+ * the CardLayout. Those four navigate to a placeholder instead, following
+ * the approach AppFrame documents for screens that aren't built yet: the
+ * app stays runnable end-to-end rather than only compiling once every page
+ * exists. Swap each placeholder(...) for the real page as it lands.
+ */
+public class NurseDashboard extends JPanel {
 
     private final AppFrame appFrame;
     private final CardLayout pageLayout = new CardLayout();
@@ -25,16 +40,13 @@ public class AdminDashboard extends JPanel {
 
     private static final String PAGE_HOME = "HOME";
     private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
-    private static final String PAGE_STAFF = "STAFF";
     private static final String PAGE_PATIENTS = "PATIENTS";
-    private static final String PAGE_ONBOARDING = "ONBOARDING";
     private static final String PAGE_TICKETS = "TICKETS";
-    private static final String PAGE_REPORTS = "REPORTS";
     private static final String PAGE_NOTIFICATIONS = "NOTIFICATIONS";
     private static final String PAGE_PAYMENTS = "PAYMENTS";
     private static final String PAGE_PROFILE = "PROFILE";
 
-    public AdminDashboard(AppFrame appFrame) {
+    public NurseDashboard(AppFrame appFrame) {
         this.appFrame = appFrame;
         setLayout(new BorderLayout());
         setBackground(AppTheme.BACKGROUND);
@@ -42,11 +54,8 @@ public class AdminDashboard extends JPanel {
         List<NavItem> navItems = List.of(
                 new NavItem(PAGE_HOME, "\uD83C\uDFE0", "Home"),
                 new NavItem(PAGE_APPOINTMENTS, "\uD83D\uDCC5", "Appointments"),
-                new NavItem(PAGE_STAFF, "\uD83D\uDC65", "Staff"),
-                new NavItem(PAGE_PATIENTS, "\uD83D\uDECC", "Patients"),
-                new NavItem(PAGE_ONBOARDING, "\uD83D\uDCCB", "Onboarding"),
+                new NavItem(PAGE_PATIENTS, "\uD83D\uDC65", "Patients"),
                 new NavItem(PAGE_TICKETS, "\uD83C\uDFAB", "Tickets"),
-                new NavItem(PAGE_REPORTS, "\uD83D\uDCCA", "Reports"),
                 new NavItem(PAGE_NOTIFICATIONS, "\uD83D\uDD14", "Notifications"),
                 new NavItem(PAGE_PAYMENTS, "\uD83D\uDCB3", "Payments"),
                 new NavItem(PAGE_PROFILE, "\uD83D\uDC64", "Profile")
@@ -54,7 +63,8 @@ public class AdminDashboard extends JPanel {
 
         sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
 
-
+        // Header must exist before registerPages(), since ProfilePage needs
+        // topHeader::refreshProfile to notify it of name/avatar changes.
         topHeader = new TopHeader(() -> {
             sidebar.select(PAGE_PROFILE);
             showPage(PAGE_PROFILE);
@@ -74,16 +84,13 @@ public class AdminDashboard extends JPanel {
     }
 
     private void registerPages() {
-        pageContainer.add(new DashboardPage(), PAGE_HOME);
+        pageContainer.add(placeholder("Nurse home is not built yet."), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
-        pageContainer.add(new StaffPage(), PAGE_STAFF);
-        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
-        pageContainer.add(new EmployeeOnboardingPage(), PAGE_ONBOARDING);
+        pageContainer.add(placeholder("Patients is not built yet."), PAGE_PATIENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
-        pageContainer.add(new ReportsPage(), PAGE_REPORTS);
-        pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
+        pageContainer.add(placeholder("Notifications is not built yet."), PAGE_NOTIFICATIONS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
-        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
+        pageContainer.add(placeholder("Profile is not built yet."), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {

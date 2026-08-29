@@ -7,17 +7,7 @@ import za.ac.cput.ui.theme.ImageManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * The single persistent window for the whole application. Rather than
- * opening/closing separate JFrames per screen (login, dashboards, etc.),
- * this frame owns one CardLayout-based content container and screens are
- * swapped in and out of it. This avoids window-flicker on login/logout/
- * role-switch and keeps taskbar/icon behavior consistent throughout.
- *
- * Screens register themselves with a String key and are shown via
- * showScreen(key). Each dashboard (Patient/Doctor/ClinicStaff) and every
- * auth screen (login/signup/etc.) is added as a card here.
- */
+
 public class AppFrame extends JFrame {
 
     public static final String SCREEN_LOGIN = "LOGIN";
@@ -34,9 +24,9 @@ public class AppFrame extends JFrame {
     public static final String SCREEN_NEW_PASSWORD = "NEW_PASSWORD";
     public static final String SCREEN_DOCTOR_DASHBOARD = "DOCTOR_DASHBOARD";
     public static final String SCREEN_PATIENT_DASHBOARD = "PATIENT_DASHBOARD";
+    public static final String SCREEN_NURSE_DASHBOARD = "NURSE_DASHBOARD";
     public static final String SCREEN_SIGNUP_VERIFY = "SIGNUP_VERIFY";
 
-    // CLINIC_STAFF_DASHBOARD, etc.) get added here as those screens are built.
 
     private final CardLayout cardLayout;
     private final JPanel contentContainer;
@@ -46,7 +36,6 @@ public class AppFrame extends JFrame {
 
     private VerifyResetCodePanel verifyResetCodePanel;
     private NewPasswordPanel newPasswordPanel;
-
     private SignupVerifyCodePanel signupVerifyCodePanel;
 
     public AppFrame() {
@@ -69,11 +58,7 @@ public class AppFrame extends JFrame {
         showScreen(SCREEN_LOGIN);
     }
 
-    /**
-     * Adds every top-level screen as a card. Placeholder screens are used
-     * for anything not yet built, so the app is runnable end-to-end at
-     * every step rather than only compiling once everything exists.
-     */
+
     private void registerScreens() {
         contentContainer.add(new LoginPanel(this), SCREEN_LOGIN);
         contentContainer.add(new PatientSignupPanel(this), SCREEN_PATIENT_SIGNUP);
@@ -97,11 +82,7 @@ public class AppFrame extends JFrame {
         contentContainer.add(signupVerifyCodePanel, SCREEN_SIGNUP_VERIFY);
     }
 
-    /**
-     * Swaps the visible screen. Called by screens themselves after a
-     * successful action (e.g. LoginPanel calls this after SessionManager
-     * is populated, to move to the correct dashboard).
-     */
+
     public void showScreen(String screenKey) {
         cardLayout.show(contentContainer, screenKey);
     }
@@ -112,11 +93,7 @@ public class AppFrame extends JFrame {
     public NewPasswordPanel getNewPasswordPanel() { return newPasswordPanel; }
     public SignupVerifyCodePanel getSignupVerifyCodePanel() { return signupVerifyCodePanel; }
 
-    /**
-     * Registers a screen built after construction (e.g. a dashboard that
-     * needs SessionManager data to build its content, so it can't be
-     * constructed eagerly in registerScreens()).
-     */
+
     public void addScreen(String screenKey, JComponent screen) {
         contentContainer.add(screen, screenKey);
     }

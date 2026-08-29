@@ -173,7 +173,6 @@ public class DashboardPage extends JPanel {
         return columns;
     }
 
-    // ── Appointment Timeline card ─────────────────────────────────
 
     private JComponent buildTimelineCard() {
         ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_LG);
@@ -270,7 +269,6 @@ public class DashboardPage extends JPanel {
         return row;
     }
 
-    /** A dot (filled + checkmark when done, hollow otherwise) with a connecting line down to the next step. */
     private JComponent timelineRail(boolean done, boolean isLast) {
         JPanel rail = new JPanel() {
             @Override
@@ -313,7 +311,6 @@ public class DashboardPage extends JPanel {
         return rail;
     }
 
-    // ── Next Appointment card ──────────────────────────────────────
 
     private JComponent buildNextAppointmentCard() {
         ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_LG);
@@ -409,7 +406,6 @@ public class DashboardPage extends JPanel {
         nextAppointmentBody.repaint();
     }
 
-    /** A translucent white "chip" holding a DATE/TIME label + value — reads much cleaner than plain stacked text on a solid color background. */
     private JComponent dateTimeChip(String emoji, String label, String value) {
         JPanel chip = new JPanel() {
             @Override

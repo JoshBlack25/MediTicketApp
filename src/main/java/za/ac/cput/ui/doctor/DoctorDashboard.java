@@ -19,6 +19,9 @@ public class DoctorDashboard extends JPanel {
     private final CardLayout pageLayout = new CardLayout();
     private final JPanel pageContainer = new JPanel(pageLayout);
 
+    private Sidebar sidebar;
+    private TopHeader topHeader;
+
     private static final String PAGE_HOME = "HOME";
     private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
     private static final String PAGE_TICKETS = "TICKETS";
@@ -40,13 +43,19 @@ public class DoctorDashboard extends JPanel {
                 new NavItem(PAGE_PROFILE, "\uD83D\uDC64", "Profile")
         );
 
-        Sidebar sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
+        sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
+
+
+        topHeader = new TopHeader(() -> {
+            sidebar.select(PAGE_PROFILE);
+            showPage(PAGE_PROFILE);
+        });
 
         registerPages();
 
         JPanel rightSide = new JPanel(new BorderLayout());
         rightSide.setBackground(AppTheme.BACKGROUND);
-        rightSide.add(new TopHeader(), BorderLayout.NORTH);
+        rightSide.add(topHeader, BorderLayout.NORTH);
         rightSide.add(pageContainer, BorderLayout.CENTER);
 
         add(sidebar, BorderLayout.WEST);
@@ -61,7 +70,7 @@ public class DoctorDashboard extends JPanel {
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
         pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
-        pageContainer.add(new ProfilePage(), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private void showPage(String key) {

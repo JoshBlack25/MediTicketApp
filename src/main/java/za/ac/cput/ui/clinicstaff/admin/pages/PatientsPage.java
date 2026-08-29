@@ -5,6 +5,8 @@ import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.Patient;
 import za.ac.cput.ui.clinicstaff.components.PatientDetailsDialog;
 import za.ac.cput.ui.clinicstaff.components.SummaryCard;
+import za.ac.cput.ui.layout.RowClickHelper;
+import za.ac.cput.ui.theme.AppDialog;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -17,16 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Patient directory for admins — the counterpart to StaffPage, but for the
- * patient user base. Beyond viewing, admins can toggle a patient between
- * ACTIVE/INACTIVE and delete a patient outright (backend now cascades the
- * delete through appointments/tickets/notifications/payments — see
- * PatientService.delete() on the backend). "Clear Inactive Patients" bulk-
- * deletes every currently-INACTIVE patient in one action, since that's the
- * main cleanup use case admins asked for. All network calls run inside a
- * SwingWorker so the window doesn't freeze mid-request.
- */
+
 public class PatientsPage extends JPanel {
 
     private SummaryCard totalCard, activeCard, newThisMonthCard;
@@ -182,10 +175,10 @@ public class PatientsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"Name", "Email", "Phone", "Date Registered", "Status", "Action"};
+        String[] columns = {"Name", "Email", "Phone", "Date Registered", "Status", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 5; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         patientsTable = new JTable(tableModel);
         patientsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -193,10 +186,13 @@ public class PatientsPage extends JPanel {
         patientsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         patientsTable.setShowGrid(false);
         patientsTable.setIntercellSpacing(new Dimension(0, 0));
-        patientsTable.getColumnModel().getColumn(5).setCellRenderer(new ActionCellRenderer());
-        patientsTable.getColumnModel().getColumn(5).setCellEditor(new ActionCellEditor());
-        patientsTable.getColumnModel().getColumn(5).setPreferredWidth(230);
-        patientsTable.getColumnModel().getColumn(5).setMinWidth(230);
+        patientsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        patientsTable.getColumnModel().getColumn(5).setMinWidth(0);
+        patientsTable.getColumnModel().getColumn(5).setMaxWidth(0);
+        patientsTable.getColumnModel().getColumn(5).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(patientsTable, 5, this::onRowClicked);
 
         JScrollPane scroll = new JScrollPane(patientsTable);
         scroll.setPreferredSize(new Dimension(0, 400));
@@ -205,7 +201,12 @@ public class PatientsPage extends JPanel {
         return scroll;
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+    private void onRowClicked(int patientId) {
+        Patient patient = findPatientById(patientId);
+        if (patient == null) return;
+        PatientDetailsDialog.show(this, patient, this::loadData);
+    }
+
 
     private void loadData() {
         BaseApiClient.ApiResult<List<Patient>> result = ApiClientProvider.getInstance().patients().getAll();
@@ -245,15 +246,14 @@ public class PatientsPage extends JPanel {
         tableModel.setRowCount(0);
         List<Patient> filtered = currentFilteredRows();
 
-        for (int i = 0; i < filtered.size(); i++) {
-            Patient p = filtered.get(i);
+        for (Patient p : filtered) {
             tableModel.addRow(new Object[]{
-                    fullName(p).isBlank() ? "—" : fullName(p),
-                    p.getEmail() != null ? p.getEmail() : "—",
-                    p.getCellPhone() != null ? p.getCellPhone() : "—",
-                    p.getDateRegistered() != null ? p.getDateRegistered().toString() : "—",
-                    p.getAccountStatus() != null ? p.getAccountStatus() : "—",
-                    i // row index into the filtered list, used by the action column
+                    fullName(p).isBlank() ? "\u2014" : fullName(p),
+                    p.getEmail() != null ? p.getEmail() : "\u2014",
+                    p.getCellPhone() != null ? p.getCellPhone() : "\u2014",
+                    p.getDateRegistered() != null ? p.getDateRegistered().toString() : "\u2014",
+                    p.getAccountStatus() != null ? p.getAccountStatus() : "\u2014",
+                    p.getUserId()
             });
         }
     }
@@ -265,79 +265,10 @@ public class PatientsPage extends JPanel {
         return (first != null ? first : "") + " " + (last != null ? last : "");
     }
 
-    // ── Status toggle ────────────────────────────────────────────
-
-    private void onToggleStatus(Patient patient) {
-        String newStatus = "ACTIVE".equals(patient.getAccountStatus()) ? "INACTIVE" : "ACTIVE";
-        patient.setAccountStatus(newStatus);
-
-        setTableEnabled(false);
-        SwingWorker<BaseApiClient.ApiResult<Patient>, Void> worker = new SwingWorker<>() {
-            @Override
-            protected BaseApiClient.ApiResult<Patient> doInBackground() {
-                return ApiClientProvider.getInstance().patients().update(patient);
-            }
-
-            @Override
-            protected void done() {
-                setTableEnabled(true);
-                try {
-                    BaseApiClient.ApiResult<Patient> result = get();
-                    if (!result.isSuccess()) {
-                        JOptionPane.showMessageDialog(PatientsPage.this,
-                                result.getMessage() != null ? result.getMessage() : "Could not update patient status.",
-                                "Update Failed", JOptionPane.ERROR_MESSAGE);
-                    }
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(PatientsPage.this,
-                            "Something went wrong updating this patient.",
-                            "Update Failed", JOptionPane.ERROR_MESSAGE);
-                }
-                loadData();
-            }
-        };
-        worker.execute();
+    private Patient findPatientById(int patientId) {
+        return allPatients.stream().filter(p -> p.getUserId() == patientId).findFirst().orElse(null);
     }
 
-    // ── Delete (single) ─────────────────────────────────────────
-
-    private void onDeletePatient(Patient patient) {
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Permanently delete " + fullName(patient) + "?\n" +
-                        "This also removes their appointments, tickets, notifications, and payment history.\n" +
-                        "This cannot be undone.",
-                "Delete Patient", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (confirm != JOptionPane.YES_OPTION) return;
-
-        setTableEnabled(false);
-        SwingWorker<BaseApiClient.ApiResult<Void>, Void> worker = new SwingWorker<>() {
-            @Override
-            protected BaseApiClient.ApiResult<Void> doInBackground() {
-                return ApiClientProvider.getInstance().patients().delete(patient.getUserId());
-            }
-
-            @Override
-            protected void done() {
-                setTableEnabled(true);
-                try {
-                    BaseApiClient.ApiResult<Void> result = get();
-                    if (!result.isSuccess()) {
-                        JOptionPane.showMessageDialog(PatientsPage.this,
-                                result.getMessage() != null ? result.getMessage() : "Could not delete this patient.",
-                                "Delete Failed", JOptionPane.ERROR_MESSAGE);
-                    }
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(PatientsPage.this,
-                            "Something went wrong deleting this patient.",
-                            "Delete Failed", JOptionPane.ERROR_MESSAGE);
-                }
-                loadData();
-            }
-        };
-        worker.execute();
-    }
-
-    // ── Clear Inactive Patients (bulk) ──────────────────────────
 
     private void onClearInactive() {
         List<Patient> inactive = allPatients.stream()
@@ -345,8 +276,7 @@ public class PatientsPage extends JPanel {
                 .collect(Collectors.toList());
 
         if (inactive.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "There are no inactive patients to clear.",
-                    "Nothing To Do", JOptionPane.INFORMATION_MESSAGE);
+            AppDialog.show(this, "Nothing To Do", "There are no inactive patients to clear.", AppDialog.Type.SUCCESS);
             return;
         }
 
@@ -357,142 +287,17 @@ public class PatientsPage extends JPanel {
                 "Clear Inactive Patients", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) return;
 
-        setTableEnabled(false);
-        clearInactiveButton.setText("Clearing...");
-        clearInactiveButton.setEnabled(false);
-
-        SwingWorker<int[], Void> worker = new SwingWorker<>() {
-            @Override
-            protected int[] doInBackground() {
-                int succeeded = 0, failed = 0;
-                for (Patient p : inactive) {
-                    BaseApiClient.ApiResult<Void> result = ApiClientProvider.getInstance().patients().delete(p.getUserId());
-                    if (result.isSuccess()) succeeded++; else failed++;
-                }
-                return new int[]{succeeded, failed};
-            }
-
-            @Override
-            protected void done() {
-                setTableEnabled(true);
-                clearInactiveButton.setText("Clear Inactive Patients");
-                clearInactiveButton.setEnabled(true);
-
-                try {
-                    int[] counts = get();
-                    String message = "Deleted " + counts[0] + " inactive patient(s).";
-                    if (counts[1] > 0) {
-                        message += "\n" + counts[1] + " could not be deleted due to a server error.";
-                    }
-                    JOptionPane.showMessageDialog(PatientsPage.this, message,
-                            "Clear Inactive Patients", JOptionPane.INFORMATION_MESSAGE);
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(PatientsPage.this,
-                            "Something went wrong clearing inactive patients.",
-                            "Clear Inactive Patients", JOptionPane.ERROR_MESSAGE);
-                }
-                loadData();
-            }
-        };
-        worker.execute();
-    }
-
-    private void setTableEnabled(boolean enabled) {
-        patientsTable.setEnabled(enabled);
-        searchField.setEnabled(enabled);
-    }
-
-    // ── Table action column ──────────────────────────────────────
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-
-            List<Patient> filtered = currentFilteredRows();
-            String toggleLabel = "View";
-            if (row >= 0 && row < filtered.size()) {
-                Patient p = filtered.get(row);
-                toggleLabel = "ACTIVE".equals(p.getAccountStatus()) ? "Deactivate" : "Activate";
-            }
-
-            add(smallButton("View", AppTheme.PRIMARY));
-            add(smallButton(toggleLabel, AppTheme.STATUS_INFO));
-            add(smallButton("Delete", AppTheme.STATUS_DANGER));
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-        private final JButton viewBtn;
-        private final JButton toggleBtn;
-        private final JButton deleteBtn;
-        private int currentIndex;
-
-        ActionCellEditor() {
-            viewBtn = smallButton("View", AppTheme.PRIMARY);
-            viewBtn.addActionListener(e -> {
-                fireEditingStopped();
-                withCurrentPatient(patient ->
-                        SwingUtilities.invokeLater(() -> PatientDetailsDialog.show(PatientsPage.this, patient)));
-            });
-
-            toggleBtn = smallButton("Activate", AppTheme.STATUS_INFO);
-            toggleBtn.addActionListener(e -> {
-                fireEditingStopped();
-                withCurrentPatient(PatientsPage.this::onToggleStatus);
-            });
-
-            deleteBtn = smallButton("Delete", AppTheme.STATUS_DANGER);
-            deleteBtn.addActionListener(e -> {
-                fireEditingStopped();
-                withCurrentPatient(PatientsPage.this::onDeletePatient);
-            });
-
-            panel.add(viewBtn);
-            panel.add(toggleBtn);
-            panel.add(deleteBtn);
-            panel.setBackground(AppTheme.SURFACE);
+        int succeeded = 0, failed = 0;
+        for (Patient p : inactive) {
+            BaseApiClient.ApiResult<Void> result = ApiClientProvider.getInstance().patients().delete(p.getUserId());
+            if (result.isSuccess()) succeeded++; else failed++;
         }
 
-        private void withCurrentPatient(java.util.function.Consumer<Patient> action) {
-            List<Patient> filtered = currentFilteredRows();
-            if (currentIndex < 0 || currentIndex >= filtered.size()) return;
-            action.accept(filtered.get(currentIndex));
+        String message = "Deleted " + succeeded + " inactive patient(s).";
+        if (failed > 0) {
+            message += "\n" + failed + " could not be deleted due to a server error.";
         }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            if (row < 0 || row >= tableModel.getRowCount()) return panel;
-            Object idxValue = tableModel.getValueAt(row, 5);
-            currentIndex = idxValue != null ? (int) idxValue : -1;
-
-            List<Patient> filtered = currentFilteredRows();
-            if (currentIndex >= 0 && currentIndex < filtered.size()) {
-                Patient p = filtered.get(currentIndex);
-                toggleBtn.setText("ACTIVE".equals(p.getAccountStatus()) ? "Deactivate" : "Activate");
-            }
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return currentIndex; }
-    }
-
-    private JButton smallButton(String text, Color color) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(color);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(color, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 6, 2, 6));
-        return button;
+        AppDialog.show(this, "Clear Inactive Patients", message, AppDialog.Type.SUCCESS);
+        loadData();
     }
 }

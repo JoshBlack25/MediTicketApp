@@ -20,11 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Mirrors the patient side's NotificationsPage exactly (same ElevatedCard
- * + IconBadge + Today/Yesterday/Earlier grouping), pointed at
- * notifications().findByDoctor(doctorId) instead of findByPatient.
- */
+
 public class NotificationsPage extends JPanel {
 
     private JPanel listContainer;

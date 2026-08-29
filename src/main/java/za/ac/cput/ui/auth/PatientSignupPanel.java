@@ -232,10 +232,11 @@ public class PatientSignupPanel extends JPanel {
                         }
 
                         if (result.isSuccess()) {
-                            String signedUpEmail = email.getText().trim();
                             clearForm();
-                            appFrame.getSignupVerifyCodePanel().setEmail(signedUpEmail);
-                            appFrame.showScreen(AppFrame.SCREEN_SIGNUP_VERIFY);
+                            AppDialog.show(PatientSignupPanel.this, "Account Created",
+                                    "Your account has been created successfully.\nPlease check your email and click the verification link before logging in.",
+                                    AppDialog.Type.SUCCESS);
+                            appFrame.showScreen(AppFrame.SCREEN_LOGIN);
                         } else {
                             errorLabel.setText(result.getMessage() != null ? result.getMessage() : "Signup failed.");
                         }

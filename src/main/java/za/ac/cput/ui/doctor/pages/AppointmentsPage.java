@@ -6,6 +6,7 @@ import za.ac.cput.model.domain.Appointment;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.clinicstaff.components.SummaryCard;
 import za.ac.cput.ui.doctor.components.AppointmentDetailsDialog;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -16,14 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Read-only view of the doctor's own appointment schedule. No
- * findByDoctor-with-status-filter endpoint exists, so this loads
- * findByDoctor(doctorId) once and filters client-side — same pattern
- * TicketsPage already uses for this role. Approve/Reject isn't offered
- * here; that's a staff-side action (AppointmentController#approve
- * requires a staffId), the doctor is only reviewing what's booked.
- */
+
 public class AppointmentsPage extends JPanel {
 
     private SummaryCard pendingCard, confirmedCard, completedCard;
@@ -135,10 +129,10 @@ public class AppointmentsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"Patient", "Date", "Time", "Reason", "Status", "Action"};
+        String[] columns = {"Patient", "Date", "Time", "Reason", "Status", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 5; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         appointmentsTable = new JTable(tableModel);
         appointmentsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -146,10 +140,13 @@ public class AppointmentsPage extends JPanel {
         appointmentsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         appointmentsTable.setShowGrid(false);
         appointmentsTable.setIntercellSpacing(new Dimension(0, 0));
-        appointmentsTable.getColumnModel().getColumn(5).setCellRenderer(new ActionCellRenderer());
-        appointmentsTable.getColumnModel().getColumn(5).setCellEditor(new ActionCellEditor());
-        appointmentsTable.getColumnModel().getColumn(5).setPreferredWidth(90);
-        appointmentsTable.getColumnModel().getColumn(5).setMinWidth(90);
+        appointmentsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        appointmentsTable.getColumnModel().getColumn(5).setMinWidth(0);
+        appointmentsTable.getColumnModel().getColumn(5).setMaxWidth(0);
+        appointmentsTable.getColumnModel().getColumn(5).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(appointmentsTable, 5, this::onRowClicked);
 
         JScrollPane scroll = new JScrollPane(appointmentsTable);
         scroll.setPreferredSize(new Dimension(0, 400));
@@ -158,7 +155,14 @@ public class AppointmentsPage extends JPanel {
         return scroll;
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+    private void onRowClicked(int appointmentId) {
+        Appointment appointment = currentFilteredRows().stream()
+                .filter(a -> a.getAppointmentId() == appointmentId)
+                .findFirst().orElse(null);
+        if (appointment == null) return;
+        AppointmentDetailsDialog.show(this, appointment);
+    }
+
 
     private void loadData() {
         int doctorId = SessionManager.getInstance().getUserId();
@@ -196,15 +200,14 @@ public class AppointmentsPage extends JPanel {
         tableModel.setRowCount(0);
         List<Appointment> filtered = currentFilteredRows();
 
-        for (int i = 0; i < filtered.size(); i++) {
-            Appointment a = filtered.get(i);
+        for (Appointment a : filtered) {
             tableModel.addRow(new Object[]{
                     patientName(a),
                     a.getAppointmentDate() != null ? a.getAppointmentDate().toString() : "\u2014",
                     a.getAppointmentTime() != null ? a.getAppointmentTime().toString() : "\u2014",
                     a.getReason() != null && !a.getReason().isBlank() ? a.getReason() : "\u2014",
                     a.getConfirmationStatus() != null ? a.getConfirmationStatus().replace("_", " ") : "\u2014",
-                    i // row index into the filtered list, used by the action column
+                    a.getAppointmentId()
             });
         }
     }
@@ -214,62 +217,5 @@ public class AppointmentsPage extends JPanel {
         String first = appt.getPatient().getName().getFirstName();
         String last = appt.getPatient().getName().getLastName();
         return (first != null ? first : "") + " " + (last != null ? last : "");
-    }
-
-    // ── Table action column ──────────────────────────────────────
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-            add(smallButton("View"));
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-        private int currentIndex;
-
-        ActionCellEditor() {
-            JButton view = smallButton("View");
-            view.addActionListener(e -> {
-                fireEditingStopped();
-                List<Appointment> filtered = currentFilteredRows();
-                if (currentIndex >= 0 && currentIndex < filtered.size()) {
-                    Appointment appointment = filtered.get(currentIndex);
-                    SwingUtilities.invokeLater(() -> AppointmentDetailsDialog.show(AppointmentsPage.this, appointment));
-                }
-            });
-            panel.add(view);
-            panel.setBackground(AppTheme.SURFACE);
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            if (row < 0 || row >= tableModel.getRowCount()) return panel;
-            Object idxValue = tableModel.getValueAt(row, 5);
-            currentIndex = idxValue != null ? (int) idxValue : -1;
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return currentIndex; }
-    }
-
-    private JButton smallButton(String text) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(AppTheme.PRIMARY);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(AppTheme.PRIMARY, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 8, 2, 8));
-        return button;
     }
 }

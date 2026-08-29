@@ -3,26 +3,29 @@ package za.ac.cput.ui.patient.pages;
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.PatientTicket;
-import za.ac.cput.model.domain.TicketStatus;
 import za.ac.cput.session.SessionManager;
-import za.ac.cput.ui.patient.components.ElevatedCard;
-import za.ac.cput.ui.patient.components.StatusBadge;
-import za.ac.cput.ui.patient.components.WrappingLabel;
+import za.ac.cput.ui.clinicstaff.components.SummaryCard;
+import za.ac.cput.ui.patient.components.TicketDetailsDialog;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
 import java.util.List;
-
+import java.util.stream.Collectors;
 
 
 public class TicketsPage extends JPanel {
 
-    private JPanel listContainer;
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a");
+    private SummaryCard openCard, inProgressCard, resolvedCard, closedCard;
+    private DefaultTableModel tableModel;
+    private JTable ticketsTable;
+
+    private List<PatientTicket> myTickets = List.of();
+    private String activeFilter = "ALL";
+    private JPanel filterBarContainer;
 
     public TicketsPage() {
         setLayout(new BorderLayout());
@@ -35,13 +38,18 @@ public class TicketsPage extends JPanel {
 
         content.add(buildHeader());
         content.add(Box.createVerticalStrut(AppTheme.SPACE_LG));
+        content.add(buildSummaryCards());
+        content.add(Box.createVerticalStrut(AppTheme.SPACE_LG));
 
-        listContainer = new JPanel();
-        listContainer.setLayout(new BoxLayout(listContainer, BoxLayout.Y_AXIS));
-        listContainer.setOpaque(false);
-        listContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
-        listContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        content.add(listContainer);
+        filterBarContainer = new JPanel(new BorderLayout());
+        filterBarContainer.setOpaque(false);
+        filterBarContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        filterBarContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        filterBarContainer.add(buildFilterBar(), BorderLayout.WEST);
+        content.add(filterBarContainer);
+
+        content.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
+        content.add(buildTable());
 
         JScrollPane scroll = new JScrollPane(content);
         scroll.setBorder(null);
@@ -52,212 +60,179 @@ public class TicketsPage extends JPanel {
     }
 
     private JComponent buildHeader() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setOpaque(false);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+
+        JPanel textStack = new JPanel();
+        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
+        textStack.setOpaque(false);
 
         JLabel title = new JLabel("Tickets");
         title.setFont(FontManager.headlineFont(Font.BOLD, 26));
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Track the status of your consultation tickets.");
+        JLabel subtitle = new JLabel("Your consultation tickets. Click a row to view details.");
         subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         subtitle.setForeground(AppTheme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, 0, 0));
 
-        panel.add(title);
-        panel.add(subtitle);
-        return panel;
+        textStack.add(title);
+        textStack.add(subtitle);
+
+        JButton refreshButton = new JButton("\u27F3 Refresh");
+        refreshButton.setFont(FontManager.bodyFont(Font.BOLD, 12));
+        refreshButton.setFocusPainted(false);
+        refreshButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        refreshButton.addActionListener(e -> loadData());
+
+        header.add(textStack, BorderLayout.WEST);
+        header.add(refreshButton, BorderLayout.EAST);
+        return header;
     }
 
+    private JComponent buildSummaryCards() {
+        JPanel grid = new JPanel(new GridLayout(1, 4, AppTheme.SPACE_MD, 0));
+        grid.setOpaque(false);
+        grid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        grid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
+        openCard = new SummaryCard("Open", "—", AppTheme.PRIMARY);
+        inProgressCard = new SummaryCard("In Consultation", "—", AppTheme.STATUS_INFO);
+        resolvedCard = new SummaryCard("Awaiting Payment", "—", AppTheme.STATUS_WARNING);
+        closedCard = new SummaryCard("Closed", "—", AppTheme.STATUS_SUCCESS);
+
+        grid.add(openCard);
+        grid.add(inProgressCard);
+        grid.add(resolvedCard);
+        grid.add(closedCard);
+        return grid;
+    }
+
+    private JComponent buildFilterBar() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, AppTheme.SPACE_SM, 0));
+        bar.setOpaque(false);
+
+        String[][] filters = {
+                {"ALL", "All"}, {"OPEN", "Open"}, {"IN_PROGRESS", "In Consultation"},
+                {"RESOLVED", "Awaiting Payment"}, {"CLOSED", "Closed"}
+        };
+
+        for (String[] f : filters) {
+            JButton btn = new JButton(f[1]);
+            btn.setFont(FontManager.bodyFont(Font.BOLD, 12));
+            btn.setFocusPainted(false);
+            btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            btn.setBackground(f[0].equals(activeFilter) ? AppTheme.PRIMARY : AppTheme.SURFACE);
+            btn.setForeground(f[0].equals(activeFilter) ? AppTheme.TEXT_ON_PRIMARY : AppTheme.TEXT_PRIMARY);
+            btn.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1, true));
+            btn.addActionListener(e -> {
+                activeFilter = f[0];
+                renderTable();
+                filterBarContainer.removeAll();
+                filterBarContainer.add(buildFilterBar(), BorderLayout.WEST);
+                filterBarContainer.revalidate();
+                filterBarContainer.repaint();
+            });
+            bar.add(btn);
+        }
+        return bar;
+    }
+
+    private JComponent buildTable() {
+        String[] columns = {"Ticket", "Doctor", "Appointment Date", "Status", "ID"};
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+        ticketsTable = new JTable(tableModel);
+        ticketsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
+        ticketsTable.setRowHeight(40);
+        ticketsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
+        ticketsTable.setShowGrid(false);
+        ticketsTable.setIntercellSpacing(new Dimension(0, 0));
+        ticketsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        ticketsTable.getColumnModel().getColumn(4).setMinWidth(0);
+        ticketsTable.getColumnModel().getColumn(4).setMaxWidth(0);
+        ticketsTable.getColumnModel().getColumn(4).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(ticketsTable, 4, this::onRowClicked);
+
+        JScrollPane scroll = new JScrollPane(ticketsTable);
+        scroll.setPreferredSize(new Dimension(0, 380));
+        scroll.setBorder(BorderFactory.createLineBorder(AppTheme.DIVIDER));
+        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return scroll;
+    }
+
+    private void onRowClicked(int ticketId) {
+        PatientTicket ticket = findById(ticketId);
+        if (ticket != null) {
+            TicketDetailsDialog.show(this, ticket);
+        }
+    }
 
 
     private void loadData() {
         int patientId = SessionManager.getInstance().getUserId();
-        BaseApiClient.ApiResult<List<PatientTicket>> result =
-                ApiClientProvider.getInstance().patientTickets().findByPatientUserId(patientId);
 
-        List<PatientTicket> tickets = result.isSuccess() ? result.getData() : List.of();
-        renderList(tickets);
+        BaseApiClient.ApiResult<List<PatientTicket>> result = ApiClientProvider.getInstance().patientTickets().getAll();
+        List<PatientTicket> all = result.isSuccess() ? result.getData() : List.of();
+
+        myTickets = all.stream()
+                .filter(t -> t.getPatient() != null && t.getPatient().getUserId() == patientId)
+                .collect(Collectors.toList());
+
+        updateSummaryCards();
+        renderTable();
     }
 
-    private void renderList(List<PatientTicket> tickets) {
-        listContainer.removeAll();
+    private void updateSummaryCards() {
+        openCard.setValue(String.valueOf(countByStatus("OPEN")));
+        inProgressCard.setValue(String.valueOf(countByStatus("IN_PROGRESS")));
+        resolvedCard.setValue(String.valueOf(countByStatus("RESOLVED")));
+        closedCard.setValue(String.valueOf(countByStatus("CLOSED")));
+    }
 
-        if (tickets.isEmpty()) {
-            listContainer.add(emptyState());
-            listContainer.revalidate();
-            listContainer.repaint();
-            return;
+    private long countByStatus(String status) {
+        return myTickets.stream().filter(t -> status.equals(t.getCurrentStatus())).count();
+    }
+
+    private void renderTable() {
+        tableModel.setRowCount(0);
+
+        List<PatientTicket> filtered = "ALL".equals(activeFilter)
+                ? myTickets
+                : myTickets.stream().filter(t -> activeFilter.equals(t.getCurrentStatus())).collect(Collectors.toList());
+
+        for (PatientTicket ticket : filtered) {
+            tableModel.addRow(new Object[]{
+                    "TK-" + String.format("%03d", ticket.getTicketId()),
+                    doctorName(ticket),
+                    appointmentDate(ticket),
+                    ticket.getCurrentStatus() != null ? ticket.getCurrentStatus().replace("_", " ") : "—",
+                    ticket.getTicketId()
+            });
         }
-
-
-        List<PatientTicket> sorted = tickets.stream()
-                .sorted(Comparator.comparing(
-                        (PatientTicket t) -> t.getTicketCreatedDate() != null ? t.getTicketCreatedDate() : java.time.LocalDateTime.MIN
-                ).reversed())
-                .toList();
-
-        for (PatientTicket ticket : sorted) {
-            listContainer.add(ticketCard(ticket));
-            listContainer.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
-        }
-
-        listContainer.revalidate();
-        listContainer.repaint();
     }
 
-    private JComponent ticketCard(PatientTicket ticket) {
-        ElevatedCard outer = new ElevatedCard(AppTheme.RADIUS_MD);
-        outer.setLayout(new BorderLayout());
-        outer.setAlignmentX(Component.LEFT_ALIGNMENT);
-        outer.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-
-        // Left accent strip colored by status — gives the eye an instant
-        // read on ticket state before even reaching the badge on the right.
-        JPanel accent = new JPanel();
-        accent.setPreferredSize(new Dimension(4, 10));
-        accent.setBackground(AppTheme.statusColor(ticket.getCurrentStatus()));
-        outer.add(accent, BorderLayout.WEST);
-
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setOpaque(false);
-        body.setBorder(BorderFactory.createEmptyBorder(
-                AppTheme.SPACE_MD, AppTheme.SPACE_MD, AppTheme.SPACE_MD, AppTheme.SPACE_MD));
-
-        JPanel topRow = new JPanel(new BorderLayout(AppTheme.SPACE_MD, 0));
-        topRow.setOpaque(false);
-        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        topRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-
-        JLabel ticketNumber = new JLabel("TICKET #" + ticket.getTicketId());
-        ticketNumber.setFont(FontManager.bodyFont(Font.BOLD, 10));
-        ticketNumber.setForeground(AppTheme.TEXT_MUTED);
-
-        topRow.add(ticketNumber, BorderLayout.WEST);
-        topRow.add(new StatusBadge(ticket.getCurrentStatus()), BorderLayout.EAST);
-
-        String description = ticket.getTicketDescription() != null && !ticket.getTicketDescription().isBlank()
-                ? ticket.getTicketDescription() : "No description";
-        WrappingLabel descLabel = new WrappingLabel(description, FontManager.bodyFont(Font.BOLD, 15), AppTheme.TEXT_PRIMARY);
-        descLabel.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, 0, AppTheme.SPACE_XS, 0));
-
-        String createdText = ticket.getTicketCreatedDate() != null
-                ? "Opened " + ticket.getTicketCreatedDate().format(DATE_FMT) : "Opened —";
-        String doctorText = ticket.getAppointment() != null
-                && ticket.getAppointment().getDoctor() != null
-                && ticket.getAppointment().getDoctor().getName() != null
-                ? "  \u2022  Dr. " + ticket.getAppointment().getDoctor().getName().getFullName()
-                : "";
-
-        JLabel metaLabel = new JLabel(createdText + doctorText);
-        metaLabel.setFont(FontManager.bodyFont(Font.PLAIN, 12));
-        metaLabel.setForeground(AppTheme.TEXT_MUTED);
-        metaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        body.add(topRow);
-        body.add(descLabel);
-        body.add(metaLabel);
-
-        if (ticket.getStatusHistory() != null && !ticket.getStatusHistory().isEmpty()) {
-            body.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
-            JSeparator divider = new JSeparator();
-            divider.setForeground(AppTheme.DIVIDER);
-            divider.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-            body.add(divider);
-            body.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
-            body.add(statusHistoryRow(ticket.getStatusHistory()));
-        }
-
-        outer.add(body, BorderLayout.CENTER);
-        return outer;
+    private String doctorName(PatientTicket ticket) {
+        if (ticket.getAppointment() == null || ticket.getAppointment().getDoctor() == null
+                || ticket.getAppointment().getDoctor().getName() == null) return "—";
+        String last = ticket.getAppointment().getDoctor().getName().getLastName();
+        return "Dr. " + (last != null ? last : "—");
     }
 
-    private JComponent statusHistoryRow(List<TicketStatus> history) {
-        // Oldest first, so it reads left-to-right as a timeline.
-        List<TicketStatus> sorted = history.stream()
-                .sorted(Comparator.comparing(
-                        (TicketStatus s) -> s.getStatusDate() != null ? s.getStatusDate() : java.time.LocalDateTime.MIN
-                ))
-                .toList();
-
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        row.setOpaque(false);
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        for (int i = 0; i < sorted.size(); i++) {
-            TicketStatus s = sorted.get(i);
-            row.add(statusChip(s.getStatusType()));
-            if (i < sorted.size() - 1) {
-                JLabel arrow = new JLabel("  \u2192  ");
-                arrow.setFont(FontManager.bodyFont(Font.PLAIN, 11));
-                arrow.setForeground(AppTheme.TEXT_MUTED);
-                row.add(arrow);
-            }
-        }
-        return row;
+    private String appointmentDate(PatientTicket ticket) {
+        if (ticket.getAppointment() == null || ticket.getAppointment().getAppointmentDate() == null) return "—";
+        return ticket.getAppointment().getAppointmentDate().toString();
     }
 
-    private JComponent statusChip(String statusType) {
-        JPanel chip = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 2)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(AppTheme.SURFACE_ALT);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        chip.setOpaque(false);
-        chip.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 8));
-
-        JLabel dot = new JLabel("\u25CF");
-        dot.setFont(FontManager.bodyFont(Font.PLAIN, 8));
-        dot.setForeground(AppTheme.statusColor(statusType));
-
-        JLabel text = new JLabel(statusType != null ? statusType.replace("_", " ") : "\u2014");
-        text.setFont(FontManager.bodyFont(Font.BOLD, 10));
-        text.setForeground(AppTheme.TEXT_SECONDARY);
-
-        chip.add(dot);
-        chip.add(text);
-        return chip;
-    }
-
-    private JComponent emptyState() {
-        ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_MD);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                card.getBorder(),
-                BorderFactory.createEmptyBorder(AppTheme.SPACE_XL, AppTheme.SPACE_LG, AppTheme.SPACE_XL, AppTheme.SPACE_LG)
-        ));
-
-        JLabel icon = new JLabel("\uD83C\uDFAB");
-        icon.setFont(FontManager.bodyFont(Font.PLAIN, 28));
-        icon.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel label = new JLabel("You don't have any tickets yet");
-        label.setFont(FontManager.bodyFont(Font.BOLD, 15));
-        label.setForeground(AppTheme.TEXT_PRIMARY);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        label.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, 0, AppTheme.SPACE_XS, 0));
-
-        JLabel sub = new JLabel("These are created once a doctor reviews a confirmed appointment.");
-        sub.setFont(FontManager.bodyFont(Font.PLAIN, 13));
-        sub.setForeground(AppTheme.TEXT_MUTED);
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        card.add(icon);
-        card.add(label);
-        card.add(sub);
-        return card;
+    private PatientTicket findById(int ticketId) {
+        return myTickets.stream().filter(t -> t.getTicketId() == ticketId).findFirst().orElse(null);
     }
 }

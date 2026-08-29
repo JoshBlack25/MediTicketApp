@@ -9,38 +9,37 @@ import za.ac.cput.ui.auth.components.LabeledTextField;
 import za.ac.cput.ui.clinicstaff.components.ChangePasswordDialog;
 import za.ac.cput.ui.theme.AppDialog;
 import za.ac.cput.ui.theme.AppTheme;
+import za.ac.cput.ui.theme.AvatarManager;
 import za.ac.cput.ui.theme.FontManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.time.format.DateTimeFormatter;
+import java.io.File;
+import java.time.LocalDate;
 
-/**
- * Mirrors the patient side's ProfilePage edit-in-place pattern. Email and
- * license number stay read-only (identity/credential fields, not
- * self-service), everything else — name, phone, specialty — can be edited.
- * Change Password reuses the clinic-staff dialog as-is since it's generic
- * over SessionManager's email + the shared auth().changePassword() call.
- */
+
 public class ProfilePage extends JPanel {
 
-    private Doctor doctor;
+    private Doctor currentDoctor;
+    private JLabel avatarLabel;
 
-    private LabeledTextField firstNameField;
-    private LabeledTextField lastNameField;
-    private LabeledTextField emailField;
-    private LabeledTextField phoneField;
-    private LabeledTextField specialtyField;
-    private LabeledTextField licenseField;
-    private LabeledTextField dobField;
+    private LabeledTextField firstNameField, middleNameField, lastNameField, phoneField, dobField, specialtyField;
 
-    private JButton editButton;
+    private JLabel emailValueLabel;
+    private JLabel licenseValueLabel;
+    private JLabel statusValueLabel;
+
     private JButton saveButton;
-    private JButton cancelButton;
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy");
+    private final Runnable onProfileUpdated;
 
     public ProfilePage() {
+        this(() -> {});
+    }
+
+    public ProfilePage(Runnable onProfileUpdated) {
+        this.onProfileUpdated = onProfileUpdated;
+
         setLayout(new BorderLayout());
         setBackground(AppTheme.BACKGROUND);
 
@@ -51,6 +50,8 @@ public class ProfilePage extends JPanel {
 
         content.add(buildHeader());
         content.add(Box.createVerticalStrut(AppTheme.SPACE_LG));
+        content.add(buildAvatarSection());
+        content.add(Box.createVerticalStrut(AppTheme.SPACE_LG));
         content.add(buildFormCard());
 
         JScrollPane scroll = new JScrollPane(content);
@@ -58,32 +59,104 @@ public class ProfilePage extends JPanel {
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         add(scroll, BorderLayout.CENTER);
 
-        loadData();
+        loadProfile();
     }
 
+
     private JComponent buildHeader() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, panel.getMaximumSize().height));
+
+        JPanel titleBlock = new JPanel();
+        titleBlock.setLayout(new BoxLayout(titleBlock, BoxLayout.Y_AXIS));
+        titleBlock.setOpaque(false);
 
         JLabel title = new JLabel("Profile");
         title.setFont(FontManager.headlineFont(Font.BOLD, 26));
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Your personal and professional details.");
+        JLabel subtitle = new JLabel("Manage your personal and professional details.");
         subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         subtitle.setForeground(AppTheme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, 0, 0));
 
-        panel.add(title);
-        panel.add(subtitle);
+        titleBlock.add(title);
+        titleBlock.add(subtitle);
+
+        JButton changePasswordButton = new JButton("Change Password");
+        changePasswordButton.setFont(FontManager.bodyFont(Font.BOLD, 13));
+        changePasswordButton.setForeground(AppTheme.TEXT_ON_PRIMARY);
+        changePasswordButton.setBackground(AppTheme.PRIMARY);
+        changePasswordButton.setFocusPainted(false);
+        changePasswordButton.setBorderPainted(false);
+        changePasswordButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        changePasswordButton.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        changePasswordButton.addActionListener(e -> ChangePasswordDialog.show(this));
+
+        JPanel buttonWrapper = new JPanel(new GridBagLayout()); // vertically centers button against the two-line title block
+        buttonWrapper.setOpaque(false);
+        buttonWrapper.add(changePasswordButton);
+
+        panel.add(titleBlock, BorderLayout.WEST);
+        panel.add(buttonWrapper, BorderLayout.EAST);
         return panel;
     }
 
-    private JComponent buildFormCard() {
+
+    private JComponent buildAvatarSection() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        avatarLabel = new JLabel();
+        avatarLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        avatarLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, AppTheme.SPACE_SM, 0));
+
+        JButton changePhoto = new JButton("Change Photo");
+        changePhoto.setFont(FontManager.bodyFont(Font.BOLD, 12));
+        changePhoto.setForeground(AppTheme.PRIMARY);
+        changePhoto.setFocusPainted(false);
+        changePhoto.setBorderPainted(false);
+        changePhoto.setContentAreaFilled(false);
+        changePhoto.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        changePhoto.setAlignmentX(Component.LEFT_ALIGNMENT);
+        changePhoto.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        changePhoto.addActionListener(e -> pickAvatar());
+
+        panel.add(avatarLabel);
+        panel.add(changePhoto);
+        return panel;
+    }
+
+    private void pickAvatar() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Choose a profile photo");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Image files", "jpg", "jpeg", "png"));
+
+        int result = chooser.showOpenDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) return;
+
+        File selected = chooser.getSelectedFile();
+        int userId = SessionManager.getInstance().getUserId();
+
+        boolean saved = AvatarManager.saveAvatar(userId, selected);
+        if (saved) {
+            avatarLabel.setIcon(AvatarManager.getCircularAvatar(userId, 96));
+            onProfileUpdated.run();
+        } else {
+            AppDialog.show(this, "Unable to Save Photo",
+                    "That file couldn't be read as an image. Try a different JPG or PNG file.", AppDialog.Type.ERROR);
+        }
+    }
+
+
+    private JPanel buildFormCard() {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(AppTheme.SURFACE);
@@ -92,142 +165,226 @@ public class ProfilePage extends JPanel {
                 BorderFactory.createEmptyBorder(AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG)
         ));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(560, Integer.MAX_VALUE));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        firstNameField = fieldRow(card, "First Name");
-        lastNameField = fieldRow(card, "Last Name");
-        emailField = fieldRow(card, "Email");
-        phoneField = fieldRow(card, "Phone");
-        specialtyField = fieldRow(card, "Specialty");
-        licenseField = fieldRow(card, "License Number");
-        dobField = fieldRow(card, "Date of Birth");
+        JLabel sectionTitle = new JLabel("Personal Information");
+        sectionTitle.setFont(FontManager.bodyFont(Font.BOLD, 16));
+        sectionTitle.setForeground(AppTheme.TEXT_PRIMARY);
+        sectionTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sectionTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, AppTheme.SPACE_MD, 0));
+        card.add(sectionTitle);
 
-        // Email, license number, and DOB are identity/credential fields —
-        // not something a doctor should be able to self-serve change here.
-        emailField.getField().setEditable(false);
-        licenseField.getField().setEditable(false);
-        dobField.getField().setEditable(false);
-        setEditable(false); // everything else starts read-only too, until "Edit" is clicked
+        firstNameField = new LabeledTextField("First Name");
+        middleNameField = new LabeledTextField("Middle Name");
+        lastNameField = new LabeledTextField("Last Name");
+        phoneField = new LabeledTextField("Phone");
+        dobField = new LabeledTextField("Date of Birth (yyyy-mm-dd)");
+        specialtyField = new LabeledTextField("Specialty");
 
-        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, AppTheme.SPACE_SM, 0));
-        buttonRow.setOpaque(false);
-        buttonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        buttonRow.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_MD, 0, 0, 0));
+        card.add(row(firstNameField, middleNameField, lastNameField));
+        card.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
+        card.add(row(phoneField, dobField, specialtyField));
+        card.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
 
-        editButton = actionButton("Edit Profile", AppTheme.PRIMARY, AppTheme.TEXT_ON_PRIMARY);
-        editButton.addActionListener(e -> enterEditMode());
 
-        saveButton = actionButton("Save Changes", AppTheme.PRIMARY, AppTheme.TEXT_ON_PRIMARY);
+        JLabel accountInfoTitle = new JLabel("Account Information");
+        accountInfoTitle.setFont(FontManager.bodyFont(Font.BOLD, 13));
+        accountInfoTitle.setForeground(AppTheme.TEXT_SECONDARY);
+        accountInfoTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        accountInfoTitle.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, AppTheme.DIVIDER),
+                BorderFactory.createEmptyBorder(AppTheme.SPACE_MD, 0, AppTheme.SPACE_SM, 0)
+        ));
+        card.add(accountInfoTitle);
+
+        card.add(row(readOnlyField("Email", true), readOnlyField("License Number", false), readOnlyField("Status", false)));
+        card.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
+
+        saveButton = new JButton("Save Changes");
+        saveButton.setFont(FontManager.bodyFont(Font.BOLD, 14));
+        saveButton.setForeground(AppTheme.TEXT_ON_PRIMARY);
+        saveButton.setBackground(AppTheme.PRIMARY);
+        saveButton.setFocusPainted(false);
+        saveButton.setBorderPainted(false);
+        saveButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        saveButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        saveButton.setMaximumSize(new Dimension(220, 44));
+        saveButton.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         saveButton.addActionListener(e -> saveChanges());
-        saveButton.setVisible(false);
+        card.add(saveButton);
 
-        cancelButton = actionButton("Cancel", AppTheme.SURFACE, AppTheme.TEXT_PRIMARY);
-        cancelButton.addActionListener(e -> loadData()); // simplest "cancel": just re-fetch from server
-        cancelButton.setVisible(false);
-
-        JButton changePassword = actionButton("Change Password", AppTheme.SURFACE, AppTheme.TEXT_PRIMARY);
-        changePassword.addActionListener(e -> ChangePasswordDialog.show(this));
-
-        buttonRow.add(editButton);
-        buttonRow.add(saveButton);
-        buttonRow.add(cancelButton);
-        buttonRow.add(changePassword);
-
-        card.add(buttonRow);
         return card;
     }
 
-    private LabeledTextField fieldRow(JPanel parent, String label) {
-        LabeledTextField field = new LabeledTextField(label);
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
-        parent.add(field);
-        parent.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
-        return field;
+
+    private JPanel row(JComponent... fields) {
+        JPanel row = new JPanel(new GridLayout(1, fields.length, AppTheme.SPACE_MD, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
+        for (JComponent f : fields) row.add(f);
+        return row;
     }
 
-    private JButton actionButton(String text, Color background, Color foreground) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 13));
-        button.setForeground(foreground);
-        button.setBackground(background);
-        button.setFocusPainted(false);
-        button.setBorderPainted(background == AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                background == AppTheme.SURFACE ? BorderFactory.createLineBorder(AppTheme.BORDER, 1, true) : null,
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return button;
-    }
 
-    private void setEditable(boolean editable) {
-        firstNameField.getField().setEditable(editable);
-        lastNameField.getField().setEditable(editable);
-        phoneField.getField().setEditable(editable);
-        specialtyField.getField().setEditable(editable);
-    }
+    private JComponent readOnlyField(String label, boolean isEmail) {
+        JPanel block = new JPanel();
+        block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
+        block.setOpaque(false);
+        block.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-    private void enterEditMode() {
-        setEditable(true);
-        editButton.setVisible(false);
-        saveButton.setVisible(true);
-        cancelButton.setVisible(true);
-    }
+        JLabel labelComp = new JLabel(label + " (cannot be changed)");
+        labelComp.setFont(FontManager.bodyFont(Font.BOLD, 11));
+        labelComp.setForeground(AppTheme.TEXT_MUTED);
+        labelComp.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-    private void exitEditMode() {
-        setEditable(false);
-        editButton.setVisible(true);
-        saveButton.setVisible(false);
-        cancelButton.setVisible(false);
-    }
+        JLabel valueComp = new JLabel("\u2014");
+        valueComp.setFont(FontManager.bodyFont(Font.PLAIN, 14));
+        valueComp.setForeground(AppTheme.TEXT_SECONDARY);
+        valueComp.setAlignmentX(Component.LEFT_ALIGNMENT);
+        valueComp.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
 
-    private void loadData() {
-        int doctorId = SessionManager.getInstance().getUserId();
-        BaseApiClient.ApiResult<Doctor> result = ApiClientProvider.getInstance().doctors().read(doctorId);
-
-        if (result.isSuccess()) {
-            doctor = result.getData();
-            populateFields();
+        if (isEmail) {
+            emailValueLabel = valueComp;
+        } else if ("License Number".equals(label)) {
+            licenseValueLabel = valueComp;
+            valueComp.setFont(FontManager.bodyFont(Font.BOLD, 14));
+            valueComp.setForeground(AppTheme.TEXT_PRIMARY);
+        } else if ("Status".equals(label)) {
+            statusValueLabel = valueComp;
+            valueComp.setFont(FontManager.bodyFont(Font.BOLD, 14));
         }
-        exitEditMode();
+
+        block.add(labelComp);
+        block.add(valueComp);
+        return block;
     }
 
-    private void populateFields() {
-        firstNameField.getField().setText(doctor.getName() != null ? doctor.getName().getFirstName() : "");
-        lastNameField.getField().setText(doctor.getName() != null ? doctor.getName().getLastName() : "");
-        emailField.getField().setText(doctor.getEmail());
-        phoneField.getField().setText(doctor.getCellPhone());
-        specialtyField.getField().setText(doctor.getSpecialty());
-        licenseField.getField().setText(doctor.getLicenseNumber());
-        dobField.getField().setText(doctor.getDob() != null ? doctor.getDob().format(DATE_FMT) : "\u2014");
+
+
+    private void loadProfile() {
+        int userId = SessionManager.getInstance().getUserId();
+        avatarLabel.setIcon(AvatarManager.getCircularAvatar(userId, 96));
+
+        setFormEnabled(false);
+
+        SwingWorker<BaseApiClient.ApiResult<Doctor>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected BaseApiClient.ApiResult<Doctor> doInBackground() {
+                return ApiClientProvider.getInstance().doctors().read(userId);
+            }
+
+            @Override
+            protected void done() {
+                setFormEnabled(true);
+
+                BaseApiClient.ApiResult<Doctor> result;
+                try {
+                    result = get();
+                } catch (Exception e) {
+                    AppDialog.show(ProfilePage.this, "Unable to Load Profile",
+                            "Something went wrong while loading your profile.", AppDialog.Type.ERROR);
+                    return;
+                }
+
+                if (!result.isSuccess() || result.getData() == null) {
+                    AppDialog.show(ProfilePage.this, "Unable to Load Profile",
+                            "Could not load your profile information.", AppDialog.Type.ERROR);
+                    return;
+                }
+
+                applyProfile(result.getData());
+            }
+        };
+        worker.execute();
+    }
+
+    private void applyProfile(Doctor doctor) {
+        currentDoctor = doctor;
+
+        if (currentDoctor.getName() != null) {
+            firstNameField.getField().setText(currentDoctor.getName().getFirstName());
+            middleNameField.getField().setText(currentDoctor.getName().getMiddleName());
+            lastNameField.getField().setText(currentDoctor.getName().getLastName());
+        }
+        phoneField.getField().setText(currentDoctor.getCellPhone());
+        dobField.getField().setText(currentDoctor.getDob() != null ? currentDoctor.getDob().toString() : "");
+        specialtyField.getField().setText(currentDoctor.getSpecialty());
+
+        emailValueLabel.setText(currentDoctor.getEmail() != null ? currentDoctor.getEmail() : "\u2014");
+        licenseValueLabel.setText(currentDoctor.getLicenseNumber() != null ? currentDoctor.getLicenseNumber() : "\u2014");
+        statusValueLabel.setText(currentDoctor.getAccountStatus() != null ? currentDoctor.getAccountStatus() : "\u2014");
+        statusValueLabel.setForeground(AppTheme.statusColor(currentDoctor.getAccountStatus()));
+    }
+
+    private void setFormEnabled(boolean enabled) {
+        for (LabeledTextField field : new LabeledTextField[]{
+                firstNameField, middleNameField, lastNameField, phoneField, dobField, specialtyField}) {
+            field.getField().setEnabled(enabled);
+        }
+        saveButton.setEnabled(enabled);
     }
 
     private void saveChanges() {
-        if (firstNameField.getText().isBlank() || lastNameField.getText().isBlank()) {
-            AppDialog.show(this, "Missing Information", "First and last name can't be empty.", AppDialog.Type.ERROR);
-            return;
+        if (currentDoctor == null) return;
+
+        LocalDate dob = null;
+        String dobText = dobField.getField().getText().trim();
+        if (!dobText.isEmpty()) {
+            try {
+                dob = LocalDate.parse(dobText);
+            } catch (Exception ex) {
+                AppDialog.show(this, "Invalid Date",
+                        "Please enter the date of birth as yyyy-mm-dd.", AppDialog.Type.ERROR);
+                return;
+            }
         }
 
-        if (doctor.getName() == null) {
-            doctor.setName(new Name());
-        }
-        doctor.getName().setFirstName(firstNameField.getText().trim());
-        doctor.getName().setLastName(lastNameField.getText().trim());
-        doctor.setCellPhone(phoneField.getText().trim());
-        doctor.setSpecialty(specialtyField.getText().trim());
+        Name updatedName = new Name();
+        updatedName.setFirstName(firstNameField.getField().getText().trim());
+        updatedName.setMiddleName(middleNameField.getField().getText().trim());
+        updatedName.setLastName(lastNameField.getField().getText().trim());
 
-        BaseApiClient.ApiResult<Doctor> result = ApiClientProvider.getInstance().doctors().update(doctor);
+        currentDoctor.setName(updatedName);
+        currentDoctor.setCellPhone(phoneField.getField().getText().trim());
+        currentDoctor.setDob(dob);
+        currentDoctor.setSpecialty(specialtyField.getField().getText().trim());
 
-        if (result.isSuccess()) {
-            doctor = result.getData();
-            populateFields();
-            SessionManager.getInstance().setFullName(doctor.getName().getFullName());
-            AppDialog.show(this, "Profile Updated", "Your changes have been saved.", AppDialog.Type.SUCCESS);
-            exitEditMode();
-        } else {
-            AppDialog.show(this, "Update Failed",
-                    result.getMessage() != null ? result.getMessage() : "Something went wrong.", AppDialog.Type.ERROR);
-        }
+        saveButton.setEnabled(false);
+        saveButton.setText("Saving...");
+
+        SwingWorker<BaseApiClient.ApiResult<Doctor>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected BaseApiClient.ApiResult<Doctor> doInBackground() {
+                return ApiClientProvider.getInstance().doctors().update(currentDoctor);
+            }
+
+            @Override
+            protected void done() {
+                saveButton.setEnabled(true);
+                saveButton.setText("Save Changes");
+
+                BaseApiClient.ApiResult<Doctor> result;
+                try {
+                    result = get();
+                } catch (Exception e) {
+                    AppDialog.show(ProfilePage.this, "Unable to Save",
+                            "Something went wrong. Please try again.", AppDialog.Type.ERROR);
+                    return;
+                }
+
+                if (result.isSuccess()) {
+                    AppDialog.show(ProfilePage.this, "Profile Updated", "Your changes have been saved.", AppDialog.Type.SUCCESS);
+                    SessionManager.getInstance().setFullName(
+                            firstNameField.getField().getText().trim() + " " + lastNameField.getField().getText().trim());
+                    loadProfile();
+                    onProfileUpdated.run();
+                } else {
+                    AppDialog.show(ProfilePage.this, "Unable to Save",
+                            result.getMessage() != null ? result.getMessage() : "Something went wrong.", AppDialog.Type.ERROR);
+                }
+            }
+        };
+        worker.execute();
     }
 }

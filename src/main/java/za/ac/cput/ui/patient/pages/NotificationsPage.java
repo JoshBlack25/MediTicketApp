@@ -103,8 +103,7 @@ public class NotificationsPage extends JPanel {
                 ).reversed())
                 .toList();
 
-        // Group into Today / Yesterday / Earlier so a long history doesn't
-        // read as one undifferentiated wall of cards.
+
         Map<String, List<Notification>> groups = new LinkedHashMap<>();
         groups.put("Today", new java.util.ArrayList<>());
         groups.put("Yesterday", new java.util.ArrayList<>());

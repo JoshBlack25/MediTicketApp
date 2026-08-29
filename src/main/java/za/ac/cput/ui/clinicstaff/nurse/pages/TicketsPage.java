@@ -74,10 +74,14 @@ public class TicketsPage extends JPanel {
     }
 
     private JComponent buildHeader() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setOpaque(false);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+
+        JPanel textStack = new JPanel();
+        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
+        textStack.setOpaque(false);
 
         JLabel title = new JLabel("Tickets");
         title.setFont(FontManager.headlineFont(Font.BOLD, 26));
@@ -90,9 +94,18 @@ public class TicketsPage extends JPanel {
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, 0, 0));
 
-        panel.add(title);
-        panel.add(subtitle);
-        return panel;
+        textStack.add(title);
+        textStack.add(subtitle);
+
+        JButton refreshButton = new JButton("\u27F3 Refresh");
+        refreshButton.setFont(FontManager.bodyFont(Font.BOLD, 12));
+        refreshButton.setFocusPainted(false);
+        refreshButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        refreshButton.addActionListener(e -> loadData());
+
+        header.add(textStack, BorderLayout.WEST);
+        header.add(refreshButton, BorderLayout.EAST);
+        return header;
     }
 
     private JComponent buildSummaryCards() {

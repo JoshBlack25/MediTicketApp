@@ -19,13 +19,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Doctor's landing page. Appointment and ticket data both load once via
- * getAll()/findByDoctor and get filtered/derived client-side for the
- * summary cards, today's schedule, and ticket queue preview — same
- * "load once, filter locally" pattern TicketsPage already established
- * for this role, since no combined dashboard endpoint exists server-side.
- */
+
 public class DashboardPage extends JPanel {
 
     private SummaryCard todaysAppointmentsCard;
@@ -125,7 +119,6 @@ public class DashboardPage extends JPanel {
         return columns;
     }
 
-    // ── Today's Schedule ────────────────────────────────────────────
 
     private JComponent buildScheduleCard() {
         ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_LG);
@@ -220,7 +213,6 @@ public class DashboardPage extends JPanel {
         return wrapped;
     }
 
-    // ── Ticket Queue preview ─────────────────────────────────────────
 
     private JComponent buildQueueCard() {
         ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_LG);
@@ -331,7 +323,6 @@ public class DashboardPage extends JPanel {
         return (first != null ? first : "") + " " + (last != null ? last.charAt(0) + "." : "");
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         int doctorId = SessionManager.getInstance().getUserId();

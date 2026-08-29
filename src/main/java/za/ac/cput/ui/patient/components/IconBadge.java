@@ -5,11 +5,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * A fixed-size circle with an emoji centered inside it, used to give list
- * icons (notification type, etc.) a contained visual anchor instead of
- * floating loose next to the text next to it.
- */
+
 public class IconBadge extends JPanel {
 
     private static final int SIZE = 38;

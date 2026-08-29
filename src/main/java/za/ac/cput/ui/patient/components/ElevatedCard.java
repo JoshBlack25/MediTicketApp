@@ -5,14 +5,7 @@ import za.ac.cput.ui.theme.AppTheme;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Rounded, softly-shadowed card container — the visual building block for
- * ticket cards, notification cards, and the dashboard's summary panels.
- * Replaces the old pattern of a plain JPanel with a square 1px border,
- * which is what made those lists look flat and "unfinished". Content is
- * added exactly like a normal panel; the shadow/rounding is self-contained
- * in paintComponent so callers don't need to think about it.
- */
+
 public class ElevatedCard extends JPanel {
 
     private static final int SHADOW_SIZE = 5;
@@ -33,7 +26,6 @@ public class ElevatedCard extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(0, 0, SHADOW_SIZE + 1, SHADOW_SIZE + 1));
     }
 
-    /** Colored cards (e.g. the primary-tinted "next appointment" card) skip the hairline border. */
     public void setDrawBorder(boolean drawBorder) {
         this.drawBorder = drawBorder;
         repaint();

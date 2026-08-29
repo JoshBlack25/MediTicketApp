@@ -2,17 +2,26 @@ package za.ac.cput.ui.layout;
 
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.theme.AppTheme;
+import za.ac.cput.ui.theme.AvatarManager;
 import za.ac.cput.ui.theme.FontManager;
-import za.ac.cput.ui.theme.ImageManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class TopHeader extends JPanel {
 
     private JLabel notificationBadge;
+    private JLabel avatarLabel;
+    private JLabel nameLabel;
+    private JLabel roleLabel;
 
     public TopHeader() {
+        this(null);
+    }
+
+    public TopHeader(Runnable onProfileClick) {
         setLayout(new BorderLayout());
         setBackground(AppTheme.SURFACE);
         setBorder(BorderFactory.createCompoundBorder(
@@ -21,18 +30,18 @@ public class TopHeader extends JPanel {
         ));
         setPreferredSize(new Dimension(0, 72));
 
-        add(buildProfileSection(), BorderLayout.WEST);
+        add(buildProfileSection(onProfileClick), BorderLayout.WEST);
         add(buildRightSection(), BorderLayout.EAST);
     }
 
-    private JComponent buildProfileSection() {
+    private JComponent buildProfileSection(Runnable onProfileClick) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, AppTheme.SPACE_SM, 0));
         panel.setOpaque(false);
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         SessionManager session = SessionManager.getInstance();
 
-        JLabel avatar = new JLabel(ImageManager.getCircularAvatar(null, 40));
+        avatarLabel = new JLabel(AvatarManager.getCircularAvatar(session.getUserId(), 40));
 
         JPanel textStack = new JPanel();
         textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
@@ -42,13 +51,12 @@ public class TopHeader extends JPanel {
                 ? session.getFullName()
                 : session.getEmail();
 
-        JLabel nameLabel = new JLabel(displayName != null ? displayName : "—");
+        nameLabel = new JLabel(displayName != null ? displayName : "—");
         nameLabel.setFont(FontManager.bodyFont(Font.BOLD, 14));
         nameLabel.setForeground(AppTheme.TEXT_PRIMARY);
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        String roleText = resolveRoleLabel(session);
-        JLabel roleLabel = new JLabel(roleText);
+        roleLabel = new JLabel(resolveRoleLabel(session));
         roleLabel.setFont(FontManager.bodyFont(Font.BOLD, 10));
         roleLabel.setForeground(AppTheme.TEXT_MUTED);
         roleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -56,9 +64,37 @@ public class TopHeader extends JPanel {
         textStack.add(nameLabel);
         textStack.add(roleLabel);
 
-        panel.add(avatar);
+        panel.add(avatarLabel);
         panel.add(textStack);
+
+        if (onProfileClick != null) {
+            panel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    onProfileClick.run();
+                }
+            });
+        }
+
         return panel;
+    }
+
+    /**
+     * Re-reads SessionManager and AvatarManager and refreshes the name,
+     * role, and avatar shown here. Call this after a profile save or
+     * avatar change elsewhere in the app so the header stays in sync
+     * without needing SessionManager to broadcast changes itself.
+     */
+    public void refreshProfile() {
+        SessionManager session = SessionManager.getInstance();
+
+        String displayName = (session.getFullName() != null && !session.getFullName().isBlank())
+                ? session.getFullName()
+                : session.getEmail();
+
+        nameLabel.setText(displayName != null ? displayName : "—");
+        roleLabel.setText(resolveRoleLabel(session));
+        avatarLabel.setIcon(AvatarManager.getCircularAvatar(session.getUserId(), 40));
     }
 
     private String resolveRoleLabel(SessionManager session) {
@@ -80,11 +116,11 @@ public class TopHeader extends JPanel {
     }
 
     private JComponent buildNotificationBell() {
-        JPanel wrapper = new JPanel(null); // absolute positioning for the badge overlay
+        JPanel wrapper = new JPanel(null);
         wrapper.setOpaque(false);
         wrapper.setPreferredSize(new Dimension(36, 36));
 
-        JLabel bell = new JLabel("\uD83D\uDD14"); // 🔔
+        JLabel bell = new JLabel("\uD83D\uDD14");
         bell.setFont(FontManager.bodyFont(Font.PLAIN, 20));
         bell.setBounds(0, 0, 36, 36);
         bell.setHorizontalAlignment(SwingConstants.CENTER);
@@ -94,14 +130,13 @@ public class TopHeader extends JPanel {
         notificationBadge.setOpaque(true);
         notificationBadge.setBackground(AppTheme.STATUS_DANGER);
         notificationBadge.setBounds(24, 2, 10, 10);
-        notificationBadge.setVisible(false); // toggled via setUnreadCount()
+        notificationBadge.setVisible(false);
 
         wrapper.add(notificationBadge);
         wrapper.add(bell);
         return wrapper;
     }
 
-    /** Call once NotificationApiClient results are available for this user. */
     public void setUnreadCount(int count) {
         notificationBadge.setVisible(count > 0);
     }

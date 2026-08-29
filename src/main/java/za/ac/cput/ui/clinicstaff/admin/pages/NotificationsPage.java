@@ -15,30 +15,16 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Split page: left = sent notification history (read-only, filterable),
- * right = compose form. Notifications must be tied to a PatientTicket
- * (and its Appointment) per NotificationFactory's validation rules, so
- * the form works by picking a ticket first, then a recipient drawn from
- * that ticket's appointment (patient/doctor/staff).
- *
- * No actual email/SMS dispatch happens on the backend today —
- * NotificationController#create just persists the row — so this is
- * effectively a manual notification log, not a live sender.
- * notificationStatus defaults to PENDING since nothing exists yet to
- * flip it to SENT/FAILED.
- */
+
 public class NotificationsPage extends JPanel {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM, HH:mm");
 
-    // Left side — history
     private JPanel historyList;
     private String activeFilter = "ALL";
     private JPanel filterBarContainer;
     private List<Notification> allNotifications = List.of();
 
-    // Right side — compose form
     private JComboBox<Object> ticketCombo;
     private JComboBox<String> recipientRoleCombo;
     private JComboBox<String> notificationTypeCombo;
@@ -66,7 +52,7 @@ public class NotificationsPage extends JPanel {
         loadHistory();
     }
 
-    // ══════════════════════════════ LEFT — HISTORY ══════════════════════════════
+
 
     private JComponent buildLeftPanel() {
         JPanel panel = new JPanel();
@@ -253,7 +239,6 @@ public class NotificationsPage extends JPanel {
         return "Unknown";
     }
 
-    // ══════════════════════════════ RIGHT — COMPOSE ══════════════════════════════
 
     private JComponent buildRightPanel() {
         JPanel panel = new JPanel();

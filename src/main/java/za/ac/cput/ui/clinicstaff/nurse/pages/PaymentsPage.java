@@ -1,3 +1,13 @@
+/*
+ PaymentsPage.java
+
+ Nurse Payments Page - Monitor patient payments, track outstanding
+ balances, and confirm in-person settlements.
+
+ Author: Abdullahi Raage Farah (230971091) and Joshua Reid Adams (230317693)
+
+ Date: 24th August 2026
+*/
 package za.ac.cput.ui.clinicstaff.nurse.pages;
 
 import za.ac.cput.api.ApiClientProvider;

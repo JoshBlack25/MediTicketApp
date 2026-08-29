@@ -18,12 +18,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Row click opens PaymentDetailsDialog, which is read-only for EFT
- * payments (settled entirely by the patient) but exposes a "Mark as Paid"
- * action for CASH, CARD, and MEDICAL_AID — those are collected in person
- * by staff.
- */
+
 public class PaymentsPage extends JPanel {
 
     private SummaryCard pendingCard, paidCard, refundedCard, failedCard;
@@ -182,7 +177,6 @@ public class PaymentsPage extends JPanel {
         }
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         BaseApiClient.ApiResult<List<Payment>> result = ApiClientProvider.getInstance().payments().getAll();

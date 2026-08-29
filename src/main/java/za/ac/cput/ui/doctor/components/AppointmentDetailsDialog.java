@@ -7,12 +7,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Read-only appointment view for the doctor's Appointments page. Unlike
- * the clinic-staff version, there are no Approve/Reject actions here —
- * that decision belongs to nurse/admin (AppointmentController#approve
- * requires a staffId), the doctor is just reviewing their own schedule.
- */
+
 public class AppointmentDetailsDialog {
 
     public static void show(Component parent, Appointment appointment) {
