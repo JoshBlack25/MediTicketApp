@@ -3,13 +3,7 @@ package za.ac.cput.ui.clinicstaff.nurse;
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.AppFrame;
-import za.ac.cput.ui.clinicstaff.nurse.pages.AppointmentsPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.DashboardPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.NotificationsPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.PatientsPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.PaymentsPage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.ProfilePage;
-import za.ac.cput.ui.clinicstaff.nurse.pages.TicketsPage;
+import za.ac.cput.ui.clinicstaff.nurse.pages.*;
 import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
 import za.ac.cput.ui.layout.TopHeader;
@@ -86,7 +80,7 @@ public class NurseDashboard extends JPanel {
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
-        pageContainer.add(new ProfilePage(), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {

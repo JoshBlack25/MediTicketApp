@@ -243,11 +243,14 @@ public class LoginPanel extends JPanel {
             PatientDashboard dashboard = new PatientDashboard(appFrame);
             appFrame.addScreen(AppFrame.SCREEN_PATIENT_DASHBOARD, dashboard);
             appFrame.showScreen(AppFrame.SCREEN_PATIENT_DASHBOARD);
-        } else {
-            // NURSE (CLINIC_STAFF, non-admin)
+        } else if ("CLINIC_STAFF".equals(session.getUserType())) {
+            // NURSE — the only non-admin CLINIC_STAFF role right now.
             NurseDashboard dashboard = new NurseDashboard(appFrame);
             appFrame.addScreen(AppFrame.SCREEN_NURSE_DASHBOARD, dashboard);
             appFrame.showScreen(AppFrame.SCREEN_NURSE_DASHBOARD);
+        } else {
+            JOptionPane.showMessageDialog(this, "Logged in as " + session.getUserType()
+                    + " — dashboard not built yet.", "Login OK", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
