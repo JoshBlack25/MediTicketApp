@@ -10,12 +10,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Read/act dialog for a single self-service employee access request.
- * Approve/Reject only render while status is PENDING — once processed,
- * the request becomes a read-only record (mirrors PaymentDetailsDialog's
- * status-gated action pattern).
- */
+
 public class AccessRequestDetailsDialog {
 
     public static void show(Component parent, EmployeeAccessRequest request, Runnable onChanged) {

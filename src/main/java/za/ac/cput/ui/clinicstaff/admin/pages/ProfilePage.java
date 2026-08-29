@@ -17,14 +17,7 @@ import java.awt.*;
 import java.io.File;
 import java.time.LocalDate;
 
-/**
- * Admin/Nurse profile — ClinicStaff only. Email and staffRole are
- * intentionally locked: email is the unique login identifier tied to
- * verification/invite tokens (changing it client-side risks orphaning
- * those), and staffRole is an admin-at-invite-time decision, never
- * self-editable. Avatar is stored locally on disk (AvatarManager),
- * entirely outside the database.
- */
+
 public class ProfilePage extends JPanel {
 
     private ClinicStaff currentStaff;
@@ -69,7 +62,6 @@ public class ProfilePage extends JPanel {
         loadProfile();
     }
 
-    // ===== Header: title/subtitle on the left, Change Password opposite it on the right =====
     private JComponent buildHeader() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
@@ -113,7 +105,6 @@ public class ProfilePage extends JPanel {
         return panel;
     }
 
-    // ===== Avatar: centered photo + link beneath =====
     private JComponent buildAvatarSection() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -161,7 +152,6 @@ public class ProfilePage extends JPanel {
         }
     }
 
-    // ===== Form card: full page width, fields grouped into grid rows (patient-signup style) =====
     private JPanel buildFormCard() {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
@@ -194,7 +184,6 @@ public class ProfilePage extends JPanel {
         card.add(row(phoneField, dobField, departmentField));
         card.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
 
-        // ===== Account Information: visually separated, same grid treatment =====
         JLabel accountInfoTitle = new JLabel("Account Information");
         accountInfoTitle.setFont(FontManager.bodyFont(Font.BOLD, 13));
         accountInfoTitle.setForeground(AppTheme.TEXT_SECONDARY);
@@ -224,7 +213,6 @@ public class ProfilePage extends JPanel {
         return card;
     }
 
-    /** Same grid-row helper style as PatientSignupPanel — spreads fields evenly across the width. */
     private JPanel row(JComponent... fields) {
         JPanel row = new JPanel(new GridLayout(1, fields.length, AppTheme.SPACE_MD, 0));
         row.setOpaque(false);
@@ -234,7 +222,6 @@ public class ProfilePage extends JPanel {
         return row;
     }
 
-    /** Read-only label+value block, styled to sit inside a row() alongside editable fields. */
     private JComponent readOnlyField(String label, boolean isEmail) {
         JPanel block = new JPanel();
         block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
@@ -268,7 +255,6 @@ public class ProfilePage extends JPanel {
         return block;
     }
 
-    // ── Data loading (off the EDT — avoids freezing the app on slow requests) ──
 
     private void loadProfile() {
         int userId = SessionManager.getInstance().getUserId();

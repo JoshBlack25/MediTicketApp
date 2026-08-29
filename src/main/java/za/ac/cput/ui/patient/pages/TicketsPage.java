@@ -16,15 +16,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Patient's Tickets page. No findByPatient endpoint on
- * PatientTicketApiClient, so loaded via getAll() and filtered client-side —
- * same pattern as Doctor's and Payments' pages. A ticket only ever exists
- * once an admin/nurse has approved the appointment and assigned a doctor
- * (AppointmentService.approveAppointment creates it atomically), so no
- * extra visibility filtering is needed beyond ownership — a patient simply
- * cannot see a ticket that doesn't exist yet.
- */
+
 public class TicketsPage extends JPanel {
 
     private SummaryCard openCard, inProgressCard, resolvedCard, closedCard;
@@ -184,7 +176,6 @@ public class TicketsPage extends JPanel {
         }
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         int patientId = SessionManager.getInstance().getUserId();

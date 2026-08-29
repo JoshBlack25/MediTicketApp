@@ -13,18 +13,7 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- * Generates a PENDING payment request for a RESOLVED ticket. The payment
- * becomes visible on both the Admin/Nurse Payments page and the Patient's
- * Payments page from this point.
- *
- * Payment method determines how settlement happens: EFT routes the
- * patient through their own self-checkout (FakeCheckoutDialog);
- * MEDICAL_AID lets the patient submit their claim details themselves
- * (MedicalAidDialog), but the payment stays PENDING until the scheme
- * authorises the claim and staff confirm it; CASH and CARD are settled
- * in person at the clinic, so staff confirm those once collected.
- */
+
 public class GeneratePaymentDialog {
 
     public static void show(Component parent, PatientTicket ticket, Runnable onGenerated) {

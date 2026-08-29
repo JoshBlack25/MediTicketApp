@@ -153,7 +153,7 @@ public class PaymentReceiptDialog {
         return wrapper;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────
+
 
     private static String statusLabel(String status) {
         if ("PAID".equals(status)) return "Paid in full";

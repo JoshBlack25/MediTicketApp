@@ -18,11 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Row-click pattern: clicking anywhere on a row opens TicketDetailsDialog,
- * which already owns the Generate Payment / Mark as Paid CTAs conditionally
- * based on status. No Action column, no ActionCellRenderer/ActionCellEditor.
- */
+
 public class TicketsPage extends JPanel {
 
     private SummaryCard openCard, inProgressCard, resolvedCard, closedCard;
@@ -162,7 +158,6 @@ public class TicketsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        // ID column stays in the model for RowClickHelper, hidden from view.
         String[] columns = {"Ticket", "Patient", "Doctor", "Appointment", "Status", "Amount", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -200,7 +195,6 @@ public class TicketsPage extends JPanel {
         TicketDetailsDialog.show(this, ticket, payment, this::loadData);
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         BaseApiClient.ApiResult<List<PatientTicket>> ticketResult =

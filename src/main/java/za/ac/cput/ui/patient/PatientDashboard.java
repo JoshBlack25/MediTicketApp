@@ -3,10 +3,10 @@ package za.ac.cput.ui.patient;
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.AppFrame;
-import za.ac.cput.ui.patient.pages.*;
 import za.ac.cput.ui.layout.NavItem;
 import za.ac.cput.ui.layout.Sidebar;
 import za.ac.cput.ui.layout.TopHeader;
+import za.ac.cput.ui.patient.pages.*;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -46,8 +46,6 @@ public class PatientDashboard extends JPanel {
 
         sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
 
-        // Header must exist before registerPages(), since ProfilePage needs
-        // topHeader::refreshProfile to notify it of name/avatar changes.
         topHeader = new TopHeader(() -> {
             sidebar.select(PAGE_PROFILE);
             showPage(PAGE_PROFILE);
@@ -66,13 +64,14 @@ public class PatientDashboard extends JPanel {
         showPage(PAGE_HOME);
     }
 
+
     private void registerPages() {
-        pageContainer.add(placeholder("Dashboard — coming soon"), PAGE_HOME);
+        pageContainer.add(new DashboardPage(), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
         pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
-        pageContainer.add(placeholder("Profile — coming soon"), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {

@@ -17,22 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Read-only workforce directory: Doctors, Nurses, Admins. Patients are
- * intentionally excluded — this page is scoped to platform staff, not the
- * full user base. No creation here (that's EmployeeOnboardingPage's job)
- * and no editing yet (backend has no safe update-staff path).
- *
- * Rows open StaffDetailsDialog on click via RowClickHelper — no Action
- * column. The hidden last column holds the row's index into the current
- * filtered list (not a real entity ID, since Doctor and ClinicStaff have
- * independently auto-generated IDs that can collide across tables), which
- * onRowClicked() uses to look the row back up.
- */
+
 public class StaffPage extends JPanel {
 
-    // Unified row type so one table can hold both Doctor and ClinicStaff
-    // without two different table shapes or duplicated rendering logic.
+
     private static class StaffRow {
         String name, role, email, phone, extra, status;
         Object source; // original Doctor or ClinicStaff, for the details dialog
@@ -162,7 +150,6 @@ public class StaffPage extends JPanel {
         staffTable.setIntercellSpacing(new Dimension(0, 0));
         staffTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Hide the ID column — same pattern as PaymentsPage.
         staffTable.getColumnModel().getColumn(6).setMinWidth(0);
         staffTable.getColumnModel().getColumn(6).setMaxWidth(0);
         staffTable.getColumnModel().getColumn(6).setWidth(0);
@@ -188,7 +175,6 @@ public class StaffPage extends JPanel {
         }
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         allRows.clear();

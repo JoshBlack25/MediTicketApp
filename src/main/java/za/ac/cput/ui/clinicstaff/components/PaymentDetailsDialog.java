@@ -12,14 +12,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.math.RoundingMode;
 
-/**
- * For EFT payments, this dialog is read-only — settlement is entirely the
- * patient's self-checkout action. MEDICAL_AID is claimed by the patient
- * from their own Payments page but stays PENDING until the scheme
- * authorises the claim; CASH and CARD are collected in person. A "Mark as
- * Paid" action is shown here for PENDING payments of those three methods,
- * which staff confirm once the money is received or the claim approved.
- */
+
 public class PaymentDetailsDialog {
 
     public static void show(Component parent, Payment payment, Runnable onChanged) {
@@ -58,8 +51,7 @@ public class PaymentDetailsDialog {
             note.setAlignmentX(Component.LEFT_ALIGNMENT);
             content.add(note);
         } else if (isPending) {
-            // CASH / CARD are collected in person; MEDICAL_AID waits on the
-            // scheme's authorisation. Either way, staff confirm it here.
+
             JLabel note = new JLabel(isMedicalAid
                     ? "<html><i>Awaiting medical aid authorisation — confirm once approved.</i></html>"
                     : "<html><i>Collected in person — confirm once received.</i></html>");
@@ -98,8 +90,7 @@ public class PaymentDetailsDialog {
         dialog.setVisible(true);
     }
 
-    // Same backend contract as before: flipping to PAID triggers
-    // PaymentService.closeTicketIfPaid() server-side automatically.
+
     private static void markAsPaid(JDialog dialog, Component parent, Payment payment, Runnable onChanged) {
         String amount = payment.getPaymentAmount().setScale(2, RoundingMode.HALF_UP).toString();
         String prompt = "MEDICAL_AID".equals(payment.getPaymentMethod())
