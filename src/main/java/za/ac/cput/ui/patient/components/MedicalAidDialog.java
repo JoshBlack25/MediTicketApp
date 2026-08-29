@@ -18,19 +18,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.math.RoundingMode;
 
-/**
- * Medical aid claim submission for a PENDING payment whose method is
- * MEDICAL_AID.
 
- * Deliberately does NOT settle the payment, which is the key difference
- * from FakeCheckoutDialog. A real medical aid claim is submitted to the
- * scheme and then sits awaiting authorisation before the clinic can
- * confirm it, so the payment correctly stays PENDING after a successful
- * submission — that's why nothing is written back through
- * PaymentApiClient here, and why show() takes no refresh callback: there
- * is no state change for the Payments table to re-read.
-
- */
 public class MedicalAidDialog {
 
     private static final String SCHEME_PROMPT = "Select your scheme";
@@ -107,8 +95,7 @@ public class MedicalAidDialog {
                 return;
             }
 
-            // Members routinely type the number in spaced groups — strip
-            // whitespace before checking the 9-digit shape.
+
             String member = memberNumber.getText().replaceAll("\\s", "");
             if (member.isEmpty()) {
                 errorLabel.setText("Please enter your membership number.");
@@ -127,10 +114,7 @@ public class MedicalAidDialog {
             errorLabel.setText(" ");
 
             dialog.dispose();
-            // AppDialog is a fixed 420x220 box that clips the OK button if the
-            // message runs long, and drops trailing words on any line wider than
-            // roughly 50 characters. It maps \n to <br>, so the breaks are placed
-            // explicitly here rather than left to its own wrapping.
+
             AppDialog.show(parent, "Claim Submitted",
                     "Sent to " + scheme + ".\nThis payment stays pending until approved.",
                     AppDialog.Type.SUCCESS);
@@ -161,9 +145,7 @@ public class MedicalAidDialog {
         label.setFont(FontManager.bodyFont(Font.BOLD, 11));
         label.setForeground(AppTheme.TEXT_MUTED);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // Java under-measures the Inter variable font's advance width, so a
-        // label sized to its exact preferred width drops its final glyph
-        // ("(optional)" renders as "(optional"). The right inset buys it back.
+
         label.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 6));
         return label;
     }

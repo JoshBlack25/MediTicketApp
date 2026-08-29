@@ -17,14 +17,7 @@ import java.awt.*;
 import java.io.File;
 import java.time.LocalDate;
 
-/**
- * Patient profile. Email is locked (unique login identifier tied to
- * verification tokens), and dateRegistered is a historical signup fact,
- * so both are read-only. Emergency contact is editable, unlike
- * ClinicStaff's department/Doctor's license number, since it carries no
- * identity or credential weight. Avatar is stored locally on disk
- * (AvatarManager), entirely outside the database.
- */
+
 public class ProfilePage extends JPanel {
 
     private Patient currentPatient;
@@ -33,7 +26,7 @@ public class ProfilePage extends JPanel {
     private LabeledTextField firstNameField, middleNameField, lastNameField, phoneField, dobField, emergencyContactField;
 
     private JLabel emailValueLabel;
-    private JLabel dateRegisteredValueLabel;
+    private JLabel registeredValueLabel;
     private JLabel statusValueLabel;
 
     private JButton saveButton;
@@ -103,7 +96,7 @@ public class ProfilePage extends JPanel {
         changePasswordButton.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         changePasswordButton.addActionListener(e -> ChangePasswordDialog.show(this));
 
-        JPanel buttonWrapper = new JPanel(new GridBagLayout());
+        JPanel buttonWrapper = new JPanel(new GridBagLayout()); // vertically centers button against the two-line title block
         buttonWrapper.setOpaque(false);
         buttonWrapper.add(changePasswordButton);
 
@@ -153,6 +146,7 @@ public class ProfilePage extends JPanel {
         boolean saved = AvatarManager.saveAvatar(userId, selected);
         if (saved) {
             avatarLabel.setIcon(AvatarManager.getCircularAvatar(userId, 96));
+            onProfileUpdated.run();
         } else {
             AppDialog.show(this, "Unable to Save Photo",
                     "That file couldn't be read as an image. Try a different JPG or PNG file.", AppDialog.Type.ERROR);
@@ -199,7 +193,7 @@ public class ProfilePage extends JPanel {
         ));
         card.add(accountInfoTitle);
 
-        card.add(row(readOnlyField("Email", true), readOnlyField("Date Registered", false), readOnlyField("Status", false)));
+        card.add(row(readOnlyField("Email", true), readOnlyField("Registered Since", false), readOnlyField("Status", false)));
         card.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
 
         saveButton = new JButton("Save Changes");
@@ -238,7 +232,7 @@ public class ProfilePage extends JPanel {
         labelComp.setForeground(AppTheme.TEXT_MUTED);
         labelComp.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel valueComp = new JLabel("—");
+        JLabel valueComp = new JLabel("\u2014");
         valueComp.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         valueComp.setForeground(AppTheme.TEXT_SECONDARY);
         valueComp.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -246,8 +240,8 @@ public class ProfilePage extends JPanel {
 
         if (isEmail) {
             emailValueLabel = valueComp;
-        } else if ("Date Registered".equals(label)) {
-            dateRegisteredValueLabel = valueComp;
+        } else if ("Registered Since".equals(label)) {
+            registeredValueLabel = valueComp;
             valueComp.setFont(FontManager.bodyFont(Font.BOLD, 14));
             valueComp.setForeground(AppTheme.TEXT_PRIMARY);
         } else if ("Status".equals(label)) {
@@ -259,6 +253,8 @@ public class ProfilePage extends JPanel {
         block.add(valueComp);
         return block;
     }
+
+
 
     private void loadProfile() {
         int userId = SessionManager.getInstance().getUserId();
@@ -309,9 +305,9 @@ public class ProfilePage extends JPanel {
         dobField.getField().setText(currentPatient.getDob() != null ? currentPatient.getDob().toString() : "");
         emergencyContactField.getField().setText(currentPatient.getEmergencyContact());
 
-        emailValueLabel.setText(currentPatient.getEmail() != null ? currentPatient.getEmail() : "—");
-        dateRegisteredValueLabel.setText(currentPatient.getDateRegistered() != null ? currentPatient.getDateRegistered().toString() : "—");
-        statusValueLabel.setText(currentPatient.getAccountStatus() != null ? currentPatient.getAccountStatus() : "—");
+        emailValueLabel.setText(currentPatient.getEmail() != null ? currentPatient.getEmail() : "\u2014");
+        registeredValueLabel.setText(currentPatient.getDateRegistered() != null ? currentPatient.getDateRegistered().toString() : "\u2014");
+        statusValueLabel.setText(currentPatient.getAccountStatus() != null ? currentPatient.getAccountStatus() : "\u2014");
         statusValueLabel.setForeground(AppTheme.statusColor(currentPatient.getAccountStatus()));
     }
 

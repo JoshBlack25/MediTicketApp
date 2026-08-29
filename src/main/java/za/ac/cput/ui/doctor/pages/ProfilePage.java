@@ -17,14 +17,7 @@ import java.awt.*;
 import java.io.File;
 import java.time.LocalDate;
 
-/**
- * Doctor profile. Email and license number are intentionally locked:
- * email is the unique login identifier tied to verification/invite
- * tokens, and license number is a credential established at signup —
- * neither is self-editable. Specialty is editable, treated the same way
- * ClinicStaff's department is. Avatar is stored locally on disk
- * (AvatarManager), entirely outside the database.
- */
+
 public class ProfilePage extends JPanel {
 
     private Doctor currentDoctor;
@@ -69,6 +62,7 @@ public class ProfilePage extends JPanel {
         loadProfile();
     }
 
+
     private JComponent buildHeader() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
@@ -84,7 +78,7 @@ public class ProfilePage extends JPanel {
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Manage your personal information and account security.");
+        JLabel subtitle = new JLabel("Manage your personal and professional details.");
         subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         subtitle.setForeground(AppTheme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -103,7 +97,7 @@ public class ProfilePage extends JPanel {
         changePasswordButton.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         changePasswordButton.addActionListener(e -> ChangePasswordDialog.show(this));
 
-        JPanel buttonWrapper = new JPanel(new GridBagLayout());
+        JPanel buttonWrapper = new JPanel(new GridBagLayout()); // vertically centers button against the two-line title block
         buttonWrapper.setOpaque(false);
         buttonWrapper.add(changePasswordButton);
 
@@ -111,6 +105,7 @@ public class ProfilePage extends JPanel {
         panel.add(buttonWrapper, BorderLayout.EAST);
         return panel;
     }
+
 
     private JComponent buildAvatarSection() {
         JPanel panel = new JPanel();
@@ -153,11 +148,13 @@ public class ProfilePage extends JPanel {
         boolean saved = AvatarManager.saveAvatar(userId, selected);
         if (saved) {
             avatarLabel.setIcon(AvatarManager.getCircularAvatar(userId, 96));
+            onProfileUpdated.run();
         } else {
             AppDialog.show(this, "Unable to Save Photo",
                     "That file couldn't be read as an image. Try a different JPG or PNG file.", AppDialog.Type.ERROR);
         }
     }
+
 
     private JPanel buildFormCard() {
         JPanel card = new JPanel();
@@ -189,6 +186,7 @@ public class ProfilePage extends JPanel {
         card.add(row(phoneField, dobField, specialtyField));
         card.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
 
+
         JLabel accountInfoTitle = new JLabel("Account Information");
         accountInfoTitle.setFont(FontManager.bodyFont(Font.BOLD, 13));
         accountInfoTitle.setForeground(AppTheme.TEXT_SECONDARY);
@@ -218,6 +216,7 @@ public class ProfilePage extends JPanel {
         return card;
     }
 
+
     private JPanel row(JComponent... fields) {
         JPanel row = new JPanel(new GridLayout(1, fields.length, AppTheme.SPACE_MD, 0));
         row.setOpaque(false);
@@ -226,6 +225,7 @@ public class ProfilePage extends JPanel {
         for (JComponent f : fields) row.add(f);
         return row;
     }
+
 
     private JComponent readOnlyField(String label, boolean isEmail) {
         JPanel block = new JPanel();
@@ -238,7 +238,7 @@ public class ProfilePage extends JPanel {
         labelComp.setForeground(AppTheme.TEXT_MUTED);
         labelComp.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel valueComp = new JLabel("—");
+        JLabel valueComp = new JLabel("\u2014");
         valueComp.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         valueComp.setForeground(AppTheme.TEXT_SECONDARY);
         valueComp.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -259,6 +259,8 @@ public class ProfilePage extends JPanel {
         block.add(valueComp);
         return block;
     }
+
+
 
     private void loadProfile() {
         int userId = SessionManager.getInstance().getUserId();
@@ -309,9 +311,9 @@ public class ProfilePage extends JPanel {
         dobField.getField().setText(currentDoctor.getDob() != null ? currentDoctor.getDob().toString() : "");
         specialtyField.getField().setText(currentDoctor.getSpecialty());
 
-        emailValueLabel.setText(currentDoctor.getEmail() != null ? currentDoctor.getEmail() : "—");
-        licenseValueLabel.setText(currentDoctor.getLicenseNumber() != null ? currentDoctor.getLicenseNumber() : "—");
-        statusValueLabel.setText(currentDoctor.getAccountStatus() != null ? currentDoctor.getAccountStatus() : "—");
+        emailValueLabel.setText(currentDoctor.getEmail() != null ? currentDoctor.getEmail() : "\u2014");
+        licenseValueLabel.setText(currentDoctor.getLicenseNumber() != null ? currentDoctor.getLicenseNumber() : "\u2014");
+        statusValueLabel.setText(currentDoctor.getAccountStatus() != null ? currentDoctor.getAccountStatus() : "\u2014");
         statusValueLabel.setForeground(AppTheme.statusColor(currentDoctor.getAccountStatus()));
     }
 

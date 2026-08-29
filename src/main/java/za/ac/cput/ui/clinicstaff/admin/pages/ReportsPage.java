@@ -14,13 +14,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
-/**
- * Fully client-side reporting — no dedicated backend report endpoint.
- * Pulls the same getAll() lists used elsewhere (Appointments, Tickets,
- * Payments, Doctors, ClinicStaff) and aggregates them fresh on every
- * load/refresh. "Live" here means recalculated each time, not cached —
- * there's no stored report data anywhere.
- */
+
 public class ReportsPage extends JPanel {
 
     private SummaryCard revenueCard, appointmentsCard, closedTicketsCard, avgFeeCard;
@@ -161,7 +155,6 @@ public class ReportsPage extends JPanel {
         section.repaint();
     }
 
-    // ── Data loading + aggregation ──────────────────────────────────
 
     private void loadData() {
         BaseApiClient.ApiResult<List<Appointment>> apptResult = ApiClientProvider.getInstance().appointments().getAll();
