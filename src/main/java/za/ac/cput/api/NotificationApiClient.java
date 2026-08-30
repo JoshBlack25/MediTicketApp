@@ -1,5 +1,5 @@
 package za.ac.cput.api;
-
+//RAUL JAAIM EVERTS - 230270565
 import com.fasterxml.jackson.core.type.TypeReference;
 import za.ac.cput.model.domain.Notification;
 
