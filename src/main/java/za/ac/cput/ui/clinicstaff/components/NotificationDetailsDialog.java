@@ -7,13 +7,13 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
-
-
+//Raul Everts 230270565
 public class NotificationDetailsDialog {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");
 
-    public static void show(Component parent, Notification notification, String recipientName, Runnable onSendFollowUp) {
+    public static void show(Component parent, Notification notification, String recipientName,
+                            Runnable onSendFollowUp, Runnable onMarkAsRead) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 "Notification Details", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setSize(440, 420);
@@ -75,8 +75,7 @@ public class NotificationDetailsDialog {
         close.addActionListener(e -> dialog.dispose());
         buttonRow.add(close);
 
-
-        if (notification.getTicket() != null) {
+        if (onSendFollowUp != null && notification.getTicket() != null) {
             JButton followUp = new JButton("Send Follow-up");
             followUp.setFont(FontManager.bodyFont(Font.BOLD, 13));
             followUp.setForeground(AppTheme.TEXT_ON_PRIMARY);
@@ -87,9 +86,25 @@ public class NotificationDetailsDialog {
             followUp.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
             followUp.addActionListener(e -> {
                 dialog.dispose();
-                if (onSendFollowUp != null) onSendFollowUp.run();
+                onSendFollowUp.run();
             });
             buttonRow.add(followUp);
+        }
+
+        if (onMarkAsRead != null && !"READ".equals(notification.getNotificationStatus())) {
+            JButton markRead = new JButton("Mark as Read");
+            markRead.setFont(FontManager.bodyFont(Font.BOLD, 13));
+            markRead.setForeground(AppTheme.TEXT_ON_PRIMARY);
+            markRead.setBackground(AppTheme.PRIMARY);
+            markRead.setFocusPainted(false);
+            markRead.setBorderPainted(false);
+            markRead.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            markRead.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
+            markRead.addActionListener(e -> {
+                dialog.dispose();
+                onMarkAsRead.run();
+            });
+            buttonRow.add(markRead);
         }
 
         content.add(buttonRow);

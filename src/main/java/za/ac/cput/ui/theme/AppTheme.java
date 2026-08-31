@@ -157,7 +157,7 @@ public class AppTheme {
     public static Color statusColor(String status) {
         if (status == null) return STATUS_NEUTRAL;
         return switch (status) {
-            case "CONFIRMED", "PAID", "RESOLVED", "SENT", "APPROVED", "ACTIVE", "COMPLETED" -> STATUS_SUCCESS;
+            case "CONFIRMED", "PAID", "RESOLVED", "SENT", "APPROVED", "ACTIVE", "COMPLETED", "READ" -> STATUS_SUCCESS;
             case "PENDING" -> STATUS_WARNING;
             case "REJECTED", "FAILED", "CANCELLED", "ESCALATED", "SUSPENDED", "INACTIVE" -> STATUS_DANGER;
             case "IN_PROGRESS", "RESCHEDULED" -> STATUS_INFO;
@@ -168,7 +168,7 @@ public class AppTheme {
     public static Color statusBackground(String status) {
         if (status == null) return STATUS_NEUTRAL_BG;
         return switch (status) {
-            case "CONFIRMED", "PAID", "RESOLVED", "SENT", "APPROVED", "ACTIVE", "COMPLETED" -> STATUS_SUCCESS_BG;
+            case "CONFIRMED", "PAID", "RESOLVED", "SENT", "APPROVED", "ACTIVE", "COMPLETED", "READ" -> STATUS_SUCCESS_BG;
             case "PENDING" -> STATUS_WARNING_BG;
             case "REJECTED", "FAILED", "CANCELLED", "ESCALATED", "SUSPENDED", "INACTIVE" -> STATUS_DANGER_BG;
             case "IN_PROGRESS", "RESCHEDULED" -> STATUS_INFO_BG;

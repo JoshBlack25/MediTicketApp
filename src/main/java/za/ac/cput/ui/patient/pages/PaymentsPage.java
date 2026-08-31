@@ -1,13 +1,5 @@
-/*
- PaymentsPage.java
-
- Patient Payments Page — view and settle outstanding balances.
-
- Author: Abdullahi Farah (230971091)
-
- Date: 23 August 2026
-*/
 package za.ac.cput.ui.patient.pages;
+//ABDULLAHI RAAGE FARAH - 230971091
 
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;

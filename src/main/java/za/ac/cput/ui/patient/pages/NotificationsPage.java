@@ -1,31 +1,28 @@
 package za.ac.cput.ui.patient.pages;
-
+//Raul Everts 230270565
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.Notification;
 import za.ac.cput.session.SessionManager;
-import za.ac.cput.ui.patient.components.ElevatedCard;
-import za.ac.cput.ui.patient.components.IconBadge;
-import za.ac.cput.ui.patient.components.StatusBadge;
-import za.ac.cput.ui.patient.components.WrappingLabel;
+import za.ac.cput.ui.clinicstaff.components.NotificationDetailsDialog;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-
+import java.util.stream.Collectors;
 
 public class NotificationsPage extends JPanel {
 
-    private JPanel listContainer;
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM, HH:mm");
+
+    private JPanel historyList;
+    private String activeFilter = "ALL";
+    private JPanel filterBarContainer;
+    private JPanel summaryBarContainer;
+    private List<Notification> allNotifications = List.of();
 
     public NotificationsPage() {
         setLayout(new BorderLayout());
@@ -33,222 +30,226 @@ public class NotificationsPage extends JPanel {
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(AppTheme.BACKGROUND);
-        content.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG));
-
-        content.add(buildHeader());
-        content.add(Box.createVerticalStrut(AppTheme.SPACE_LG));
-
-        listContainer = new JPanel();
-        listContainer.setLayout(new BoxLayout(listContainer, BoxLayout.Y_AXIS));
-        listContainer.setOpaque(false);
-        listContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
-        listContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        content.add(listContainer);
-
-        JScrollPane scroll = new JScrollPane(content);
-        scroll.setBorder(null);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-        add(scroll, BorderLayout.CENTER);
-
-        loadData();
-    }
-
-    private JComponent buildHeader() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setOpaque(false);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.setOpaque(false);
+        content.setBorder(BorderFactory.createEmptyBorder(
+                AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG));
 
         JLabel title = new JLabel("Notifications");
-        title.setFont(FontManager.headlineFont(Font.BOLD, 26));
+        title.setFont(FontManager.headlineFont(Font.BOLD, 20));
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Updates about your appointments, tickets, and payments.");
-        subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 14));
+        JLabel subtitle = new JLabel("Your notification history.");
+        subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 13));
         subtitle.setForeground(AppTheme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitle.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, 0, 0));
+        subtitle.setBorder(BorderFactory.createEmptyBorder(2, 0, AppTheme.SPACE_MD, 0));
 
-        panel.add(title);
-        panel.add(subtitle);
-        return panel;
+        summaryBarContainer = new JPanel(new BorderLayout());
+        summaryBarContainer.setOpaque(false);
+        summaryBarContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        summaryBarContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        filterBarContainer = new JPanel(new BorderLayout());
+        filterBarContainer.setOpaque(false);
+        filterBarContainer.setAlignmentX(Component.LEFT_ALIGNMENT);
+        filterBarContainer.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        filterBarContainer.add(buildFilterBar(), BorderLayout.WEST);
+
+        historyList = new JPanel();
+        historyList.setLayout(new BoxLayout(historyList, BoxLayout.Y_AXIS));
+        historyList.setOpaque(false);
+
+        JScrollPane scroll = new JScrollPane(historyList);
+        scroll.setBorder(null);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        content.add(title);
+        content.add(subtitle);
+        content.add(summaryBarContainer);
+        content.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
+        content.add(filterBarContainer);
+        content.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
+        content.add(scroll);
+
+        add(content, BorderLayout.CENTER);
+
+        loadNotifications();
     }
 
+    private JComponent buildFilterBar() {
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, AppTheme.SPACE_SM, 0));
+        bar.setOpaque(false);
 
+        String[][] filters = {
+                {"ALL", "All"}, {"PENDING", "Pending"}, {"SENT", "Sent"},
+                {"FAILED", "Failed"}, {"READ", "Read"}
+        };
 
-    private void loadData() {
-        int patientId = SessionManager.getInstance().getUserId();
+        for (String[] f : filters) {
+            JButton btn = new JButton(f[1]);
+            btn.setFont(FontManager.bodyFont(Font.BOLD, 11));
+            btn.setFocusPainted(false);
+            btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            btn.setBackground(f[0].equals(activeFilter) ? AppTheme.PRIMARY : AppTheme.SURFACE);
+            btn.setForeground(f[0].equals(activeFilter) ? AppTheme.TEXT_ON_PRIMARY : AppTheme.TEXT_PRIMARY);
+            btn.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER, 1, true));
+            btn.setMargin(new Insets(2, 8, 2, 8));
+            btn.addActionListener(e -> {
+                activeFilter = f[0];
+                renderNotifications();
+                filterBarContainer.removeAll();
+                filterBarContainer.add(buildFilterBar(), BorderLayout.WEST);
+                filterBarContainer.revalidate();
+                filterBarContainer.repaint();
+            });
+            bar.add(btn);
+        }
+        return bar;
+    }
+
+    private void loadNotifications() {
+        int userId = SessionManager.getInstance().getUserId();
         BaseApiClient.ApiResult<List<Notification>> result =
-                ApiClientProvider.getInstance().notifications().findByPatient(patientId);
-
-        List<Notification> notifications = result.isSuccess() ? result.getData() : List.of();
-        renderList(notifications);
+                ApiClientProvider.getInstance().notifications().findByPatient(userId);
+        allNotifications = result.isSuccess() && result.getData() != null ? result.getData() : List.of();
+        allNotifications = allNotifications.stream()
+                .sorted((a, b) -> {
+                    if (a.getNotificationDate() == null) return 1;
+                    if (b.getNotificationDate() == null) return -1;
+                    return b.getNotificationDate().compareTo(a.getNotificationDate());
+                })
+                .collect(Collectors.toList());
+        renderNotifications();
+        summaryBarContainer.removeAll();
+        summaryBarContainer.add(buildSummaryBar(allNotifications), BorderLayout.WEST);
+        summaryBarContainer.revalidate();
+        summaryBarContainer.repaint();
     }
 
-    private void renderList(List<Notification> notifications) {
-        listContainer.removeAll();
+    private void renderNotifications() {
+        historyList.removeAll();
 
-        if (notifications.isEmpty()) {
-            listContainer.add(emptyState());
-            listContainer.revalidate();
-            listContainer.repaint();
-            return;
-        }
+        List<Notification> filtered = allNotifications.stream()
+                .filter(n -> activeFilter.equals("ALL") || activeFilter.equals(n.getNotificationStatus()))
+                .collect(Collectors.toList());
 
-        List<Notification> sorted = notifications.stream()
-                .sorted(Comparator.comparing(
-                        (Notification n) -> n.getNotificationDate() != null ? n.getNotificationDate() : java.time.LocalDateTime.MIN
-                ).reversed())
-                .toList();
-
-
-        Map<String, List<Notification>> groups = new LinkedHashMap<>();
-        groups.put("Today", new java.util.ArrayList<>());
-        groups.put("Yesterday", new java.util.ArrayList<>());
-        groups.put("Earlier", new java.util.ArrayList<>());
-
-        LocalDate today = LocalDate.now();
-        LocalDate yesterday = today.minusDays(1);
-        for (Notification n : sorted) {
-            LocalDate d = n.getNotificationDate() != null ? n.getNotificationDate().toLocalDate() : null;
-            if (d != null && d.isEqual(today)) {
-                groups.get("Today").add(n);
-            } else if (d != null && d.isEqual(yesterday)) {
-                groups.get("Yesterday").add(n);
-            } else {
-                groups.get("Earlier").add(n);
+        if (filtered.isEmpty()) {
+            JLabel empty = new JLabel("No notifications found.");
+            empty.setFont(FontManager.bodyFont(Font.PLAIN, 13));
+            empty.setForeground(AppTheme.TEXT_MUTED);
+            empty.setAlignmentX(Component.LEFT_ALIGNMENT);
+            empty.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_MD, 0, 0, 0));
+            historyList.add(empty);
+        } else {
+            for (Notification n : filtered) {
+                historyList.add(buildNotificationCard(n));
+                historyList.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
             }
         }
 
-        boolean firstGroup = true;
-        for (Map.Entry<String, List<Notification>> group : groups.entrySet()) {
-            if (group.getValue().isEmpty()) continue;
+        historyList.revalidate();
+        historyList.repaint();
+    }
 
-            if (!firstGroup) {
-                listContainer.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
-            }
-            firstGroup = false;
+    private JPanel buildSummaryBar(List<Notification> notifications) {
+        long pending = notifications.stream()
+                .filter(n -> "PENDING".equals(n.getNotificationStatus())).count();
+        long failed = notifications.stream()
+                .filter(n -> "FAILED".equals(n.getNotificationStatus())).count();
+        long read = notifications.stream()
+                .filter(n -> "READ".equals(n.getNotificationStatus())).count();
 
-            listContainer.add(groupHeader(group.getKey()));
-            listContainer.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
+        JPanel bar = new JPanel(new FlowLayout(FlowLayout.LEFT, AppTheme.SPACE_MD, 0));
+        bar.setOpaque(false);
+        bar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            for (Notification notification : group.getValue()) {
-                listContainer.add(notificationCard(notification));
-                listContainer.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
-            }
+        if (pending > 0) bar.add(buildDot(AppTheme.STATUS_WARNING, "Pending", pending));
+        if (failed > 0) bar.add(buildDot(AppTheme.STATUS_DANGER, "Failed", failed));
+        if (read > 0) bar.add(buildDot(AppTheme.STATUS_SUCCESS, "Read", read));
+        if (pending == 0 && failed == 0 && read == 0) {
+            JLabel none = new JLabel("No active notifications");
+            none.setFont(FontManager.bodyFont(Font.PLAIN, 12));
+            none.setForeground(AppTheme.TEXT_MUTED);
+            bar.add(none);
         }
 
-        listContainer.revalidate();
-        listContainer.repaint();
+        return bar;
     }
 
-    private JComponent groupHeader(String label) {
-        JLabel header = new JLabel(label.toUpperCase());
-        header.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        header.setForeground(AppTheme.TEXT_MUTED);
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return header;
+    private JComponent buildDot(Color color, String label, long count) {
+        JPanel item = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        item.setOpaque(false);
+
+        JLabel dot = new JLabel("●");
+        dot.setFont(FontManager.bodyFont(Font.PLAIN, 12));
+        dot.setForeground(color);
+
+        JLabel text = new JLabel(label + " (" + count + ")");
+        text.setFont(FontManager.bodyFont(Font.PLAIN, 12));
+        text.setForeground(AppTheme.TEXT_SECONDARY);
+
+        item.add(dot);
+        item.add(text);
+        return item;
     }
 
-    private JComponent notificationCard(Notification notification) {
-        ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_MD);
-        card.setLayout(new BorderLayout(AppTheme.SPACE_MD, 0));
-        card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                card.getBorder(),
-                BorderFactory.createEmptyBorder(AppTheme.SPACE_MD, AppTheme.SPACE_MD, AppTheme.SPACE_MD, AppTheme.SPACE_MD)
-        ));
-
-        IconBadge icon = new IconBadge(iconFor(notification), colorFor(notification));
-
-        JPanel textStack = new JPanel();
-        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
-        textStack.setOpaque(false);
-
-        JPanel topRow = new JPanel(new BorderLayout(AppTheme.SPACE_SM, 0));
-        topRow.setOpaque(false);
-        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        topRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-
-        JLabel typeLabel = new JLabel(categoryFor(notification));
-        typeLabel.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        typeLabel.setForeground(AppTheme.TEXT_MUTED);
-        topRow.add(typeLabel, BorderLayout.WEST);
-        topRow.add(new StatusBadge(notification.getNotificationStatus()), BorderLayout.EAST);
-
-        String message = notification.getNotificationMessage() != null && !notification.getNotificationMessage().isBlank()
-                ? notification.getNotificationMessage() : "No message content";
-        WrappingLabel messageLabel = new WrappingLabel(message, FontManager.bodyFont(Font.PLAIN, 13), AppTheme.TEXT_PRIMARY);
-        messageLabel.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, AppTheme.SPACE_XS, 0));
-
-        String dateText = notification.getNotificationDate() != null
-                ? notification.getNotificationDate().format(DATE_FMT) : "\u2014";
-        String channelText = notification.getNotificationType() != null
-                ? "  \u2022  Sent via " + notification.getNotificationType() : "";
-
-        JLabel metaLabel = new JLabel(dateText + channelText);
-        metaLabel.setFont(FontManager.bodyFont(Font.PLAIN, 11));
-        metaLabel.setForeground(AppTheme.TEXT_MUTED);
-        metaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        textStack.add(topRow);
-        textStack.add(messageLabel);
-        textStack.add(metaLabel);
-
-        card.add(icon, BorderLayout.WEST);
-        card.add(textStack, BorderLayout.CENTER);
-        return card;
-    }
-
-    private String categoryFor(Notification notification) {
-        if (notification.getAppointment() != null) return "APPOINTMENT";
-        if (notification.getTicket() != null) return "TICKET";
-        return "GENERAL";
-    }
-
-    private String iconFor(Notification notification) {
-        if (notification.getAppointment() != null) return "\uD83D\uDCC5"; // 📅
-        if (notification.getTicket() != null) return "\uD83C\uDFAB";      // 🎫
-        return "\uD83D\uDD14";                                            // 🔔
-    }
-
-    private Color colorFor(Notification notification) {
-        if (notification.getAppointment() != null) return AppTheme.PRIMARY_LIGHT;
-        if (notification.getTicket() != null) return AppTheme.STATUS_INFO_BG;
-        return AppTheme.STATUS_NEUTRAL_BG;
-    }
-
-    private JComponent emptyState() {
-        ElevatedCard card = new ElevatedCard(AppTheme.RADIUS_MD);
+    private JComponent buildNotificationCard(Notification n) {
+        JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        card.setBackground(AppTheme.SURFACE);
         card.setBorder(BorderFactory.createCompoundBorder(
-                card.getBorder(),
-                BorderFactory.createEmptyBorder(AppTheme.SPACE_XL, AppTheme.SPACE_LG, AppTheme.SPACE_XL, AppTheme.SPACE_LG)
+                BorderFactory.createLineBorder(AppTheme.BORDER, 1, true),
+                BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, AppTheme.SPACE_MD, AppTheme.SPACE_SM, AppTheme.SPACE_MD)
         ));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        JLabel icon = new JLabel("\uD83D\uDD14");
-        icon.setFont(FontManager.bodyFont(Font.PLAIN, 28));
-        icon.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel metaRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        metaRow.setOpaque(false);
+        metaRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        metaRow.setBorder(BorderFactory.createEmptyBorder(2, 0, 4, 0));
 
-        JLabel label = new JLabel("No notifications yet");
-        label.setFont(FontManager.bodyFont(Font.BOLD, 15));
-        label.setForeground(AppTheme.TEXT_PRIMARY);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        label.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, 0, AppTheme.SPACE_XS, 0));
+        JLabel typeTag = new JLabel(n.getNotificationType() != null ? n.getNotificationType() : "—");
+        typeTag.setFont(FontManager.bodyFont(Font.BOLD, 10));
+        typeTag.setForeground(AppTheme.TEXT_MUTED);
 
-        JLabel sub = new JLabel("You'll see updates about appointments, tickets, and payments here.");
-        sub.setFont(FontManager.bodyFont(Font.PLAIN, 13));
-        sub.setForeground(AppTheme.TEXT_MUTED);
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel statusTag = new JLabel("\u00B7 " + (n.getNotificationStatus() != null ? n.getNotificationStatus() : "—"));
+        statusTag.setFont(FontManager.bodyFont(Font.BOLD, 10));
+        statusTag.setForeground(AppTheme.statusColor(n.getNotificationStatus()));
 
-        card.add(icon);
-        card.add(label);
-        card.add(sub);
+        JLabel dateTag = new JLabel("\u00B7 " + (n.getNotificationDate() != null ? n.getNotificationDate().format(DATE_FMT) : "—"));
+        dateTag.setFont(FontManager.bodyFont(Font.PLAIN, 10));
+        dateTag.setForeground(AppTheme.TEXT_MUTED);
+
+        metaRow.add(typeTag);
+        metaRow.add(statusTag);
+        metaRow.add(dateTag);
+
+        String preview = n.getNotificationMessage() != null ? n.getNotificationMessage() : "";
+        if (preview.length() > 80) preview = preview.substring(0, 80) + "...";
+        JLabel messageLabel = new JLabel("<html>" + preview + "</html>");
+        messageLabel.setFont(FontManager.bodyFont(Font.PLAIN, 13));
+        messageLabel.setForeground(AppTheme.TEXT_PRIMARY);
+        messageLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(metaRow);
+        card.add(messageLabel);
+
+        card.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                NotificationDetailsDialog.show(NotificationsPage.this, n, "You", null,
+                        () ->{
+                            var result = ApiClientProvider.getInstance().notifications().markAsRead(n.getNotificationId());
+                            System.out.println("markAsRead: success=" + result.isSuccess() + " status=" + result.getStatusCode() + " msg=" + result.getMessage());
+                            loadNotifications();
+                        });
+            }
+        });
+
         return card;
     }
 }
