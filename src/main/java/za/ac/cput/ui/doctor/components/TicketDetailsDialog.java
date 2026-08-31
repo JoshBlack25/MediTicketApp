@@ -1,7 +1,10 @@
 package za.ac.cput.ui.doctor.components;
 
+import za.ac.cput.api.ApiClientProvider;
+import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.PatientTicket;
 import za.ac.cput.model.domain.TicketStatus;
+import za.ac.cput.ui.theme.AppDialog;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -9,20 +12,16 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.format.DateTimeFormatter;
 
-/**
- * Read-only detail view for RESOLVED tickets — once the doctor has
- * completed a consultation, there's nothing further to do here; payment/
- * closing is clinic-staff territory from this point on.
- */
+
 public class TicketDetailsDialog {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm");
 
-    public static void show(Component parent, PatientTicket ticket) {
+    public static void show(Component parent, PatientTicket ticket, Runnable onChanged) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 "Ticket #TK-" + String.format("%03d", ticket.getTicketId()),
                 Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setSize(460, 480);
+        dialog.setSize(460, 520);
         dialog.setLocationRelativeTo(parent);
 
         JPanel content = new JPanel();
@@ -30,23 +29,59 @@ public class TicketDetailsDialog {
         content.setBackground(AppTheme.SURFACE);
         content.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG, AppTheme.SPACE_LG));
 
-        content.add(field("Patient", patientName(ticket)));
-        content.add(field("Appointment", appointmentDate(ticket)));
+        content.add(fieldBlock("Patient", patientName(ticket)));
+        content.add(fieldBlock("Appointment",
+                ticket.getAppointment() != null && ticket.getAppointment().getAppointmentDate() != null
+                        ? ticket.getAppointment().getAppointmentDate() + " " +
+                        (ticket.getAppointment().getAppointmentTime() != null ? ticket.getAppointment().getAppointmentTime() : "")
+                        : "—"));
 
-        JLabel statusValue = new JLabel(ticket.getCurrentStatus() != null ? ticket.getCurrentStatus().replace("_", " ") : "—");
-        statusValue.setFont(FontManager.bodyFont(Font.BOLD, 14));
+        JLabel statusValue = new JLabel(statusBadgeText(ticket.getCurrentStatus()));
+        statusValue.setFont(FontManager.bodyFont(Font.BOLD, 13));
         statusValue.setForeground(AppTheme.statusColor(ticket.getCurrentStatus()));
-        content.add(labeledRow("Status", statusValue));
+        content.add(labeledRow("Ticket Status", statusValue));
 
         content.add(Box.createVerticalStrut(AppTheme.SPACE_SM));
-        JLabel historyTitle = new JLabel("Consultation History");
-        historyTitle.setFont(FontManager.bodyFont(Font.BOLD, 14));
-        historyTitle.setForeground(AppTheme.TEXT_PRIMARY);
-        historyTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        historyTitle.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, 0, AppTheme.SPACE_XS, 0));
-        content.add(historyTitle);
-
+        content.add(sectionTitle("Status History"));
         content.add(buildHistoryList(ticket));
+
+        content.add(Box.createVerticalStrut(AppTheme.SPACE_MD));
+
+        String status = ticket.getCurrentStatus();
+        if ("OPEN".equals(status)) {
+            JButton start = new JButton("Start Consultation");
+            start.setFont(FontManager.bodyFont(Font.BOLD, 13));
+            start.setForeground(AppTheme.TEXT_ON_PRIMARY);
+            start.setBackground(AppTheme.PRIMARY);
+            start.setFocusPainted(false);
+            start.setBorderPainted(false);
+            start.setAlignmentX(Component.LEFT_ALIGNMENT);
+            start.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            start.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+            start.addActionListener(e -> startConsultation(dialog, parent, ticket, onChanged));
+            content.add(start);
+        } else if ("IN_PROGRESS".equals(status)) {
+            JButton complete = new JButton("Complete Consultation");
+            complete.setFont(FontManager.bodyFont(Font.BOLD, 13));
+            complete.setForeground(AppTheme.TEXT_ON_PRIMARY);
+            complete.setBackground(AppTheme.STATUS_SUCCESS);
+            complete.setFocusPainted(false);
+            complete.setBorderPainted(false);
+            complete.setAlignmentX(Component.LEFT_ALIGNMENT);
+            complete.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            complete.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+            complete.addActionListener(e -> {
+                dialog.dispose();
+                CompleteConsultationDialog.show(parent, ticket, onChanged);
+            });
+            content.add(complete);
+        } else if ("RESOLVED".equals(status)) {
+            JLabel note = new JLabel("<html><i>Consultation complete. This ticket is now with clinic staff for payment processing.</i></html>");
+            note.setFont(FontManager.bodyFont(Font.PLAIN, 12));
+            note.setForeground(AppTheme.TEXT_MUTED);
+            note.setAlignmentX(Component.LEFT_ALIGNMENT);
+            content.add(note);
+        }
 
         JScrollPane scroll = new JScrollPane(content);
         scroll.setBorder(null);
@@ -56,6 +91,21 @@ public class TicketDetailsDialog {
         dialog.setVisible(true);
     }
 
+    private static void startConsultation(JDialog dialog, Component parent, PatientTicket ticket, Runnable onChanged) {
+        BaseApiClient.ApiResult<PatientTicket> result = ApiClientProvider.getInstance()
+                .patientTickets().progressStatus(ticket.getTicketId(), "IN_PROGRESS", null);
+
+        if (result.isSuccess()) {
+            dialog.dispose();
+            AppDialog.show(parent, "Consultation Started",
+                    "The ticket is now in progress.", AppDialog.Type.SUCCESS);
+            if (onChanged != null) onChanged.run();
+        } else {
+            AppDialog.show(parent, "Unable to Start",
+                    result.getMessage() != null ? result.getMessage() : "Something went wrong.", AppDialog.Type.ERROR);
+        }
+    }
+
     private static String patientName(PatientTicket ticket) {
         if (ticket.getPatient() == null || ticket.getPatient().getName() == null) return "—";
         String first = ticket.getPatient().getName().getFirstName();
@@ -63,10 +113,8 @@ public class TicketDetailsDialog {
         return (first != null ? first : "") + " " + (last != null ? last : "");
     }
 
-    private static String appointmentDate(PatientTicket ticket) {
-        if (ticket.getAppointment() == null || ticket.getAppointment().getAppointmentDate() == null) return "—";
-        return ticket.getAppointment().getAppointmentDate() + " " +
-                (ticket.getAppointment().getAppointmentTime() != null ? ticket.getAppointment().getAppointmentTime() : "");
+    private static String statusBadgeText(String status) {
+        return status != null ? status.replace("_", " ") : "—";
     }
 
     private static JComponent buildHistoryList(PatientTicket ticket) {
@@ -89,7 +137,7 @@ public class TicketDetailsDialog {
             row.setAlignmentX(Component.LEFT_ALIGNMENT);
             row.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
 
-            JLabel statusLabel = new JLabel(status.getStatusType() != null ? status.getStatusType().replace("_", " ") : "—");
+            JLabel statusLabel = new JLabel(statusBadgeText(status.getStatusType()));
             statusLabel.setFont(FontManager.bodyFont(Font.BOLD, 12));
             statusLabel.setForeground(AppTheme.statusColor(status.getStatusType()));
 
@@ -113,7 +161,7 @@ public class TicketDetailsDialog {
         return list;
     }
 
-    private static JComponent field(String label, String value) {
+    private static JComponent fieldBlock(String label, String value) {
         JLabel valueLabel = new JLabel(value);
         valueLabel.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         valueLabel.setForeground(AppTheme.TEXT_PRIMARY);
@@ -137,5 +185,14 @@ public class TicketDetailsDialog {
         block.add(labelComp);
         block.add(valueComponent);
         return block;
+    }
+
+    private static JComponent sectionTitle(String title) {
+        JLabel label = new JLabel(title);
+        label.setFont(FontManager.bodyFont(Font.BOLD, 14));
+        label.setForeground(AppTheme.TEXT_PRIMARY);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        label.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_SM, 0, AppTheme.SPACE_XS, 0));
+        return label;
     }
 }

@@ -1,11 +1,12 @@
 package za.ac.cput.ui.patient.pages;
-
+//JOSHUA REID ADAMS - 230317693
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.Appointment;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.patient.components.AppointmentDetailsDialog;
 import za.ac.cput.ui.patient.components.BookAppointmentDialog;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -15,12 +16,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Patient-side Appointments — view only, plus booking. No status-changing
- * actions exist here at all; approval/rejection/completion are entirely
- * nurse/admin/doctor territory per the workflow. Loaded via
- * findByPatient(selfId) so a patient only ever sees their own appointments.
- */
+
 public class AppointmentsPage extends JPanel {
 
     private DefaultTableModel tableModel;
@@ -130,10 +126,10 @@ public class AppointmentsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"Doctor", "Date", "Time", "Status", "Reason", "Action"};
+        String[] columns = {"Doctor", "Date", "Time", "Status", "Reason", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 5; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         appointmentsTable = new JTable(tableModel);
         appointmentsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -141,8 +137,13 @@ public class AppointmentsPage extends JPanel {
         appointmentsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         appointmentsTable.setShowGrid(false);
         appointmentsTable.setIntercellSpacing(new Dimension(0, 0));
-        appointmentsTable.getColumnModel().getColumn(5).setCellRenderer(new ActionCellRenderer());
-        appointmentsTable.getColumnModel().getColumn(5).setCellEditor(new ActionCellEditor());
+        appointmentsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        appointmentsTable.getColumnModel().getColumn(5).setMinWidth(0);
+        appointmentsTable.getColumnModel().getColumn(5).setMaxWidth(0);
+        appointmentsTable.getColumnModel().getColumn(5).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(appointmentsTable, 5, this::onRowClicked);
 
         JScrollPane scroll = new JScrollPane(appointmentsTable);
         scroll.setPreferredSize(new Dimension(0, 400));
@@ -151,7 +152,11 @@ public class AppointmentsPage extends JPanel {
         return scroll;
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+    private void onRowClicked(int appointmentId) {
+        Appointment appt = findById(appointmentId);
+        if (appt == null) return;
+        AppointmentDetailsDialog.show(this, appt);
+    }
 
     private void loadData() {
         int patientId = SessionManager.getInstance().getUserId();
@@ -168,7 +173,7 @@ public class AppointmentsPage extends JPanel {
                 ? allAppointments
                 : allAppointments.stream().filter(a -> activeFilter.equals(a.getConfirmationStatus())).collect(Collectors.toList());
 
-        // Most recent first
+
         filtered = filtered.stream()
                 .sorted((a, b) -> {
                     if (a.getAppointmentDate() == null) return 1;
@@ -197,61 +202,5 @@ public class AppointmentsPage extends JPanel {
 
     private Appointment findById(int appointmentId) {
         return allAppointments.stream().filter(a -> a.getAppointmentId() == appointmentId).findFirst().orElse(null);
-    }
-
-    // ── Table action column ──────────────────────────────────────
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-            add(smallButton("View"));
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-        private int currentAppointmentId;
-
-        ActionCellEditor() {
-            JButton viewBtn = smallButton("View");
-            viewBtn.addActionListener(e -> {
-                fireEditingStopped();
-                Appointment appt = findById(currentAppointmentId);
-                if (appt != null) {
-                    SwingUtilities.invokeLater(() -> AppointmentDetailsDialog.show(AppointmentsPage.this, appt));
-                }
-            });
-            panel.add(viewBtn);
-            panel.setBackground(AppTheme.SURFACE);
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            if (row < 0 || row >= tableModel.getRowCount()) return panel;
-            Object idValue = tableModel.getValueAt(row, 5);
-            currentAppointmentId = idValue != null ? (int) idValue : -1;
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return currentAppointmentId; }
-    }
-
-    private JButton smallButton(String text) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(AppTheme.PRIMARY);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(AppTheme.PRIMARY, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 8, 2, 8));
-        return button;
     }
 }

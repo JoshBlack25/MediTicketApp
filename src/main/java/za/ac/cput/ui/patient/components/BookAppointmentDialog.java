@@ -1,5 +1,5 @@
 package za.ac.cput.ui.patient.components;
-
+//JOSHUA REID ADAMS - 230317693
 import com.github.lgooddatepicker.components.DatePicker;
 import com.github.lgooddatepicker.components.DatePickerSettings;
 import com.github.lgooddatepicker.components.TimePicker;
@@ -18,13 +18,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/**
- * Booking never assigns a doctor or sets a status beyond PENDING — doctor
- * assignment happens at approval time (nurse/admin's job), not here. Date
- * picker blocks past dates natively via setDateRangeLimits(); no business-
- * hours or doctor-availability enforcement exists in the backend yet, so
- * none is attempted client-side either.
- */
+
 public class BookAppointmentDialog {
 
     public static void show(Component parent, Runnable onBooked) {

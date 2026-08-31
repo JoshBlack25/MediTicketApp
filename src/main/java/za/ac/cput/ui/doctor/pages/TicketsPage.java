@@ -1,13 +1,12 @@
 package za.ac.cput.ui.doctor.pages;
-
+//JOSHUA REID ADAMS - 230317693
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.PatientTicket;
 import za.ac.cput.session.SessionManager;
-import za.ac.cput.ui.doctor.components.CompleteConsultationDialog;
 import za.ac.cput.ui.doctor.components.TicketDetailsDialog;
 import za.ac.cput.ui.clinicstaff.components.SummaryCard;
-import za.ac.cput.ui.theme.AppDialog;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -17,20 +16,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Doctor's core workflow page. No findByDoctor endpoint exists on
- * PatientTicketApiClient, so tickets are loaded via getAll() and filtered
- * client-side to those whose appointment.doctor.userId matches the
- * logged-in doctor — same "load once, filter locally" pattern used
- * elsewhere (Reports page, Tickets/Payments cross-referencing).
- *
- * OPEN → "Start Consultation" (single click, IN_PROGRESS).
- * IN_PROGRESS → "Complete Consultation" (requires notes, RESOLVED —
- * triggers the backend's auto-complete-appointment side effect).
- * RESOLVED → "View" only, read-only from here on.
- * CLOSED tickets are excluded entirely — not part of the doctor's
- * active working queue.
- */
+
 public class TicketsPage extends JPanel {
 
     private SummaryCard openCard, inProgressCard, resolvedCard;
@@ -74,25 +60,38 @@ public class TicketsPage extends JPanel {
     }
 
     private JComponent buildHeader() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setOpaque(false);
-        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+
+        JPanel textStack = new JPanel();
+        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
+        textStack.setOpaque(false);
 
         JLabel title = new JLabel("Tickets");
         title.setFont(FontManager.headlineFont(Font.BOLD, 26));
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Your assigned consultations.");
+        JLabel subtitle = new JLabel("Your assigned consultations. Click a row to view details.");
         subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         subtitle.setForeground(AppTheme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setBorder(BorderFactory.createEmptyBorder(AppTheme.SPACE_XS, 0, 0, 0));
 
-        panel.add(title);
-        panel.add(subtitle);
-        return panel;
+        textStack.add(title);
+        textStack.add(subtitle);
+
+        JButton refreshButton = new JButton("\u27F3 Refresh");
+        refreshButton.setFont(FontManager.bodyFont(Font.BOLD, 12));
+        refreshButton.setFocusPainted(false);
+        refreshButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        refreshButton.addActionListener(e -> loadData());
+
+        header.add(textStack, BorderLayout.WEST);
+        header.add(refreshButton, BorderLayout.EAST);
+        return header;
     }
 
     private JComponent buildSummaryCards() {
@@ -141,10 +140,10 @@ public class TicketsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"Ticket", "Patient", "Appointment Date", "Status", "Action"};
+        String[] columns = {"Ticket", "Patient", "Appointment Date", "Status", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 4; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         ticketsTable = new JTable(tableModel);
         ticketsTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -152,8 +151,13 @@ public class TicketsPage extends JPanel {
         ticketsTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         ticketsTable.setShowGrid(false);
         ticketsTable.setIntercellSpacing(new Dimension(0, 0));
-        ticketsTable.getColumnModel().getColumn(4).setCellRenderer(new ActionCellRenderer());
-        ticketsTable.getColumnModel().getColumn(4).setCellEditor(new ActionCellEditor());
+        ticketsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        ticketsTable.getColumnModel().getColumn(4).setMinWidth(0);
+        ticketsTable.getColumnModel().getColumn(4).setMaxWidth(0);
+        ticketsTable.getColumnModel().getColumn(4).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(ticketsTable, 4, this::onRowClicked);
 
         JScrollPane scroll = new JScrollPane(ticketsTable);
         scroll.setPreferredSize(new Dimension(0, 380));
@@ -162,7 +166,13 @@ public class TicketsPage extends JPanel {
         return scroll;
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+    private void onRowClicked(int ticketId) {
+        PatientTicket ticket = findById(ticketId);
+        if (ticket != null) {
+            TicketDetailsDialog.show(this, ticket, this::loadData);
+        }
+    }
+
 
     private void loadData() {
         int doctorId = SessionManager.getInstance().getUserId();
@@ -174,7 +184,7 @@ public class TicketsPage extends JPanel {
                 .filter(t -> t.getAppointment() != null
                         && t.getAppointment().getDoctor() != null
                         && t.getAppointment().getDoctor().getUserId() == doctorId)
-                .filter(t -> !"CLOSED".equals(t.getCurrentStatus())) // not part of the active working queue
+                .filter(t -> !"CLOSED".equals(t.getCurrentStatus()))
                 .collect(Collectors.toList());
 
         updateSummaryCards();
@@ -223,103 +233,5 @@ public class TicketsPage extends JPanel {
 
     private PatientTicket findById(int ticketId) {
         return myTickets.stream().filter(t -> t.getTicketId() == ticketId).findFirst().orElse(null);
-    }
-
-    // ── Table action column — buttons vary by status ────────────────
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-            if (row < 0 || row >= tableModel.getRowCount()) return this;
-
-            Object idValue = tableModel.getValueAt(row, 4);
-            if (idValue == null) return this;
-
-            PatientTicket ticket = findById((int) idValue);
-            addButtonsFor(this, ticket);
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            panel.removeAll();
-            panel.setBackground(AppTheme.SURFACE);
-
-            if (row < 0 || row >= tableModel.getRowCount()) return panel;
-            Object idValue = tableModel.getValueAt(row, 4);
-            if (idValue == null) return panel;
-
-            PatientTicket ticket = findById((int) idValue);
-            addButtonsFor(panel, ticket, this::fireEditingStopped);
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return null; }
-    }
-
-    private void addButtonsFor(JPanel container, PatientTicket ticket) { addButtonsFor(container, ticket, null); }
-
-    private void addButtonsFor(JPanel container, PatientTicket ticket, Runnable stopEditing) {
-        if (ticket == null) return;
-        String status = ticket.getCurrentStatus();
-
-        if ("OPEN".equals(status)) {
-            JButton start = smallButton("Start Consultation", AppTheme.PRIMARY);
-            start.addActionListener(e -> {
-                if (stopEditing != null) stopEditing.run();
-                SwingUtilities.invokeLater(() -> startConsultation(ticket));
-            });
-            container.add(start);
-        } else if ("IN_PROGRESS".equals(status)) {
-            JButton complete = smallButton("Complete Consultation", AppTheme.STATUS_SUCCESS);
-            complete.addActionListener(e -> {
-                if (stopEditing != null) stopEditing.run();
-                SwingUtilities.invokeLater(() -> CompleteConsultationDialog.show(this, ticket, this::loadData));
-            });
-            container.add(complete);
-        } else {
-            JButton view = smallButton("View", AppTheme.TEXT_SECONDARY);
-            view.addActionListener(e -> {
-                if (stopEditing != null) stopEditing.run();
-                SwingUtilities.invokeLater(() -> TicketDetailsDialog.show(this, ticket));
-            });
-            container.add(view);
-        }
-    }
-
-    private void startConsultation(PatientTicket ticket) {
-        BaseApiClient.ApiResult<PatientTicket> result = ApiClientProvider.getInstance()
-                .patientTickets().progressStatus(ticket.getTicketId(), "IN_PROGRESS", null);
-
-        if (result.isSuccess()) {
-            AppDialog.show(this, "Consultation Started",
-                    "The ticket is now in progress.", AppDialog.Type.SUCCESS);
-            loadData();
-        } else {
-            AppDialog.show(this, "Unable to Start",
-                    result.getMessage() != null ? result.getMessage() : "Something went wrong.", AppDialog.Type.ERROR);
-        }
-    }
-
-    private JButton smallButton(String text, Color color) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(color);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(color, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 8, 2, 8));
-        return button;
     }
 }

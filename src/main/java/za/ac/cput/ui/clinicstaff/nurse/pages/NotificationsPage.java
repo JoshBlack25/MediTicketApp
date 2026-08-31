@@ -13,7 +13,7 @@ import java.awt.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
-
+//Raul Everts 230270565
 public class NotificationsPage extends JPanel {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("d MMM, HH:mm");
@@ -241,12 +241,14 @@ public class NotificationsPage extends JPanel {
         card.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                ApiClientProvider.getInstance().notifications().markAsRead(n.getNotificationId());
-                NotificationDetailsDialog.show(NotificationsPage.this, n, "You", null);
-                loadNotifications();
+                NotificationDetailsDialog.show(NotificationsPage.this, n, "You", null,
+                        () ->{
+                            var result = ApiClientProvider.getInstance().notifications().markAsRead(n.getNotificationId());
+                            System.out.println("markAsRead: success=" + result.isSuccess() + " status=" + result.getStatusCode() + " msg=" + result.getMessage());
+                            loadNotifications();
+                        });
             }
         });
-
         return card;
     }
 }

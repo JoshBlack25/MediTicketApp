@@ -12,11 +12,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDateTime;
 
-/**
- * Shown from a CONFIRMED appointment row that doesn't have a ticket yet.
- * Ticket starts life as OPEN automatically — PatientTicketService.create()
- * calls addStatus(OPEN) server-side, so nothing extra is needed here.
- */
+
 public class CreateTicketDialog {
 
     public static void show(Component parent, Appointment appointment, Runnable onCreated) {

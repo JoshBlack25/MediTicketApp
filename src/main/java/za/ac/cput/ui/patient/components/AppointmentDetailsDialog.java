@@ -1,5 +1,5 @@
 package za.ac.cput.ui.patient.components;
-
+//JOSHUA REID ADAMS - 230317693
 import za.ac.cput.model.domain.Appointment;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
@@ -7,14 +7,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Read-only appointment detail view for the patient side. No actions here
- * — patients can't approve/reject/complete anything. If the appointment
- * was rejected, the reason (stored as free text on the Appointment itself
- * per rejectAppointment()'s current implementation — reason isn't a
- * separate field, it overwrites/stays on Appointment.reason) is shown
- * prominently since this is the one place a patient learns why.
- */
+
 public class AppointmentDetailsDialog {
 
     public static void show(Component parent, Appointment appointment) {

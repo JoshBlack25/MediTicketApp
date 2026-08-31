@@ -6,6 +6,7 @@ import za.ac.cput.model.domain.ClinicStaff;
 import za.ac.cput.model.domain.Doctor;
 import za.ac.cput.ui.clinicstaff.components.StaffDetailsDialog;
 import za.ac.cput.ui.clinicstaff.components.SummaryCard;
+import za.ac.cput.ui.layout.RowClickHelper;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
 
@@ -16,19 +17,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Read-only workforce directory: Doctors, Nurses, Admins. Patients are
- * intentionally excluded — this page is scoped to platform staff, not the
- * full user base. No creation here (that's EmployeeOnboardingPage's job)
- * and no editing yet (backend has no safe update-staff path).
- */
+
 public class StaffPage extends JPanel {
 
-    // Unified row type so one table can hold both Doctor and ClinicStaff
-    // without two different table shapes or duplicated rendering logic.
+
     private static class StaffRow {
         String name, role, email, phone, extra, status;
-        Object source; // original Doctor or ClinicStaff, for the View dialog
+        Object source; // original Doctor or ClinicStaff, for the details dialog
         boolean isDoctor;
     }
 
@@ -83,7 +78,7 @@ public class StaffPage extends JPanel {
         title.setForeground(AppTheme.TEXT_PRIMARY);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("View everyone with clinic staff access to MediTicket.");
+        JLabel subtitle = new JLabel("View everyone with clinic staff access to MediTicket. Click a row to view details.");
         subtitle.setFont(FontManager.bodyFont(Font.PLAIN, 14));
         subtitle.setForeground(AppTheme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -142,10 +137,10 @@ public class StaffPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        String[] columns = {"Name", "Role", "Email", "Phone", "Department / Specialty", "Status", "Action"};
+        String[] columns = {"Name", "Role", "Email", "Phone", "Department / Specialty", "Status", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
-            public boolean isCellEditable(int row, int col) { return col == 6; }
+            public boolean isCellEditable(int row, int col) { return false; }
         };
         staffTable = new JTable(tableModel);
         staffTable.setFont(FontManager.bodyFont(Font.PLAIN, 13));
@@ -153,8 +148,13 @@ public class StaffPage extends JPanel {
         staffTable.getTableHeader().setFont(FontManager.bodyFont(Font.BOLD, 12));
         staffTable.setShowGrid(false);
         staffTable.setIntercellSpacing(new Dimension(0, 0));
-        staffTable.getColumnModel().getColumn(6).setCellRenderer(new ActionCellRenderer());
-        staffTable.getColumnModel().getColumn(6).setCellEditor(new ActionCellEditor());
+        staffTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        staffTable.getColumnModel().getColumn(6).setMinWidth(0);
+        staffTable.getColumnModel().getColumn(6).setMaxWidth(0);
+        staffTable.getColumnModel().getColumn(6).setWidth(0);
+
+        RowClickHelper.makeRowsClickable(staffTable, 6, this::onRowClicked);
 
         JScrollPane scroll = new JScrollPane(staffTable);
         scroll.setPreferredSize(new Dimension(0, 400));
@@ -163,7 +163,18 @@ public class StaffPage extends JPanel {
         return scroll;
     }
 
-    // ── Data loading ──────────────────────────────────────────────
+    private void onRowClicked(int filteredIndex) {
+        List<StaffRow> filtered = currentFilteredRows();
+        if (filteredIndex < 0 || filteredIndex >= filtered.size()) return;
+
+        StaffRow row = filtered.get(filteredIndex);
+        if (row.isDoctor) {
+            StaffDetailsDialog.showDoctor(this, (Doctor) row.source);
+        } else {
+            StaffDetailsDialog.showClinicStaff(this, (ClinicStaff) row.source);
+        }
+    }
+
 
     private void loadData() {
         allRows.clear();
@@ -216,9 +227,7 @@ public class StaffPage extends JPanel {
     private void renderTable() {
         tableModel.setRowCount(0);
 
-        List<StaffRow> filtered = "ALL".equals(activeFilter)
-                ? allRows
-                : allRows.stream().filter(r -> activeFilter.equals(r.role)).collect(Collectors.toList());
+        List<StaffRow> filtered = currentFilteredRows();
 
         for (int i = 0; i < filtered.size(); i++) {
             StaffRow row = filtered.get(i);
@@ -229,9 +238,15 @@ public class StaffPage extends JPanel {
                     row.phone != null ? row.phone : "—",
                     row.extra != null && !row.extra.isBlank() ? row.extra : "—",
                     row.status != null ? row.status : "—",
-                    i // row index into the filtered list, used by the action column
+                    i // hidden — index into the filtered list, used by onRowClicked
             });
         }
+    }
+
+    private List<StaffRow> currentFilteredRows() {
+        return "ALL".equals(activeFilter)
+                ? allRows
+                : allRows.stream().filter(r -> activeFilter.equals(r.role)).collect(Collectors.toList());
     }
 
     private String roleLabel(String role) {
@@ -252,73 +267,5 @@ public class StaffPage extends JPanel {
         } catch (Exception e) {
             return "—";
         }
-    }
-
-    // ── Table action column ──────────────────────────────────────
-
-    private List<StaffRow> currentFilteredRows() {
-        return "ALL".equals(activeFilter)
-                ? allRows
-                : allRows.stream().filter(r -> activeFilter.equals(r.role)).collect(Collectors.toList());
-    }
-
-    private class ActionCellRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        ActionCellRenderer() { setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4)); }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                       boolean hasFocus, int row, int col) {
-            removeAll();
-            setBackground(AppTheme.SURFACE);
-            add(smallButton("View"));
-            return this;
-        }
-    }
-
-    private class ActionCellEditor extends AbstractCellEditor implements javax.swing.table.TableCellEditor {
-        private final JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
-        private int currentIndex;
-
-        ActionCellEditor() {
-            JButton viewBtn = smallButton("View");
-            viewBtn.addActionListener(e -> {
-                fireEditingStopped();
-                List<StaffRow> filtered = currentFilteredRows();
-                if (currentIndex < 0 || currentIndex >= filtered.size()) return;
-                StaffRow row = filtered.get(currentIndex);
-                SwingUtilities.invokeLater(() -> {
-                    if (row.isDoctor) {
-                        StaffDetailsDialog.showDoctor(StaffPage.this, (Doctor) row.source);
-                    } else {
-                        StaffDetailsDialog.showClinicStaff(StaffPage.this, (ClinicStaff) row.source);
-                    }
-                });
-            });
-            panel.add(viewBtn);
-            panel.setBackground(AppTheme.SURFACE);
-        }
-
-        @Override
-        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int col) {
-            if (row < 0 || row >= tableModel.getRowCount()) return panel;
-            Object idxValue = tableModel.getValueAt(row, 6);
-            currentIndex = idxValue != null ? (int) idxValue : -1;
-            return panel;
-        }
-
-        @Override
-        public Object getCellEditorValue() { return currentIndex; }
-    }
-
-    private JButton smallButton(String text) {
-        JButton button = new JButton(text);
-        button.setFont(FontManager.bodyFont(Font.BOLD, 11));
-        button.setForeground(AppTheme.PRIMARY);
-        button.setBackground(AppTheme.SURFACE);
-        button.setBorder(BorderFactory.createLineBorder(AppTheme.PRIMARY, 1, true));
-        button.setFocusPainted(false);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setMargin(new Insets(2, 8, 2, 8));
-        return button;
     }
 }

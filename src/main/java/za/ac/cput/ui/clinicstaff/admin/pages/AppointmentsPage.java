@@ -1,5 +1,5 @@
 package za.ac.cput.ui.clinicstaff.admin.pages;
-
+//JOSHUA REID ADAMS - 230317693
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.domain.Appointment;
@@ -18,12 +18,7 @@ import java.awt.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Row-click pattern: clicking anywhere on a row opens AppointmentDetailsDialog,
- * which owns the Approve/Reject CTAs (only shown for PENDING rows). No
- * Action column, no ActionCellRenderer/ActionCellEditor — RowClickHelper
- * handles the click, the dialog handles the decision.
- */
+
 public class AppointmentsPage extends JPanel {
 
     private SummaryCard pendingCard, confirmedCard, completedCard, cancelledCard;
@@ -149,9 +144,7 @@ public class AppointmentsPage extends JPanel {
     }
 
     private JComponent buildTable() {
-        // Status column dropped its own text-badge styling for now — plain
-        // text, same as before. id column (last) stays in the model for
-        // RowClickHelper to read, hidden from view via zero width.
+
         String[] columns = {"Patient", "Doctor", "Date", "Time", "Status", "Reason", "ID"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -165,7 +158,6 @@ public class AppointmentsPage extends JPanel {
         appointmentsTable.setIntercellSpacing(new Dimension(0, 0));
         appointmentsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Hide the ID column visually without removing it from the model
         appointmentsTable.getColumnModel().getColumn(6).setMinWidth(0);
         appointmentsTable.getColumnModel().getColumn(6).setMaxWidth(0);
         appointmentsTable.getColumnModel().getColumn(6).setWidth(0);
@@ -196,7 +188,6 @@ public class AppointmentsPage extends JPanel {
         });
     }
 
-    // ── Data loading ──────────────────────────────────────────────
 
     private void loadData() {
         BaseApiClient.ApiResult<List<Appointment>> result = ApiClientProvider.getInstance().appointments().getAll();
@@ -328,7 +319,7 @@ public class AppointmentsPage extends JPanel {
                 "Reject Appointment", JOptionPane.PLAIN_MESSAGE);
 
         if (reason == null) {
-            return; // user cancelled — do nothing
+            return;
         }
         if (reason.isBlank()) {
             AppDialog.show(this, "Reason Required",

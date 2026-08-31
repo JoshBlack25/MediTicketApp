@@ -1,5 +1,5 @@
 package za.ac.cput.ui.clinicstaff.admin;
-
+//JOSHUA REID ADAMS - 230317693
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.session.SessionManager;
 import za.ac.cput.ui.AppFrame;
@@ -20,9 +20,13 @@ public class AdminDashboard extends JPanel {
     private final CardLayout pageLayout = new CardLayout();
     private final JPanel pageContainer = new JPanel(pageLayout);
 
+    private Sidebar sidebar;
+    private TopHeader topHeader;
+
     private static final String PAGE_HOME = "HOME";
     private static final String PAGE_APPOINTMENTS = "APPOINTMENTS";
     private static final String PAGE_STAFF = "STAFF";
+    private static final String PAGE_PATIENTS = "PATIENTS";
     private static final String PAGE_ONBOARDING = "ONBOARDING";
     private static final String PAGE_TICKETS = "TICKETS";
     private static final String PAGE_REPORTS = "REPORTS";
@@ -39,6 +43,7 @@ public class AdminDashboard extends JPanel {
                 new NavItem(PAGE_HOME, "\uD83C\uDFE0", "Home"),
                 new NavItem(PAGE_APPOINTMENTS, "\uD83D\uDCC5", "Appointments"),
                 new NavItem(PAGE_STAFF, "\uD83D\uDC65", "Staff"),
+                new NavItem(PAGE_PATIENTS, "\uD83D\uDECC", "Patients"),
                 new NavItem(PAGE_ONBOARDING, "\uD83D\uDCCB", "Onboarding"),
                 new NavItem(PAGE_TICKETS, "\uD83C\uDFAB", "Tickets"),
                 new NavItem(PAGE_REPORTS, "\uD83D\uDCCA", "Reports"),
@@ -47,13 +52,19 @@ public class AdminDashboard extends JPanel {
                 new NavItem(PAGE_PROFILE, "\uD83D\uDC64", "Profile")
         );
 
-        Sidebar sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
+        sidebar = new Sidebar(navItems, PAGE_HOME, this::showPage, this::onLogout);
+
+
+        topHeader = new TopHeader(() -> {
+            sidebar.select(PAGE_PROFILE);
+            showPage(PAGE_PROFILE);
+        });
 
         registerPages();
 
         JPanel rightSide = new JPanel(new BorderLayout());
         rightSide.setBackground(AppTheme.BACKGROUND);
-        rightSide.add(new TopHeader(), BorderLayout.NORTH);
+        rightSide.add(topHeader, BorderLayout.NORTH);
         rightSide.add(pageContainer, BorderLayout.CENTER);
 
         add(sidebar, BorderLayout.WEST);
@@ -66,12 +77,13 @@ public class AdminDashboard extends JPanel {
         pageContainer.add(new DashboardPage(), PAGE_HOME);
         pageContainer.add(new AppointmentsPage(), PAGE_APPOINTMENTS);
         pageContainer.add(new StaffPage(), PAGE_STAFF);
+        pageContainer.add(new PatientsPage(), PAGE_PATIENTS);
         pageContainer.add(new EmployeeOnboardingPage(), PAGE_ONBOARDING);
         pageContainer.add(new TicketsPage(), PAGE_TICKETS);
         pageContainer.add(new ReportsPage(), PAGE_REPORTS);
         pageContainer.add(new NotificationsPage(), PAGE_NOTIFICATIONS);
         pageContainer.add(new PaymentsPage(), PAGE_PAYMENTS);
-        pageContainer.add(new ProfilePage(), PAGE_PROFILE);
+        pageContainer.add(new ProfilePage(topHeader::refreshProfile), PAGE_PROFILE);
     }
 
     private JComponent placeholder(String message) {

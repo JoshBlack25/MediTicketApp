@@ -14,13 +14,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-/**
- * Step 2. Holds the email carried over from ForgotPasswordPanel (set via
- * setEmail() right before this screen is shown — same pre-fill pattern as
- * AppFrame's doctorSignupPanel/clinicStaffSignupPanel). On successful
- * verification, stashes the returned reset session token and hands off
- * to NewPasswordPanel.
- */
+
 public class VerifyResetCodePanel extends JPanel {
 
     private final AppFrame appFrame;

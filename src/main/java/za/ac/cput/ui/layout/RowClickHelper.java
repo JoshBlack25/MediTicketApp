@@ -27,7 +27,8 @@ public class RowClickHelper {
             public void mouseClicked(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
                 if (row < 0) return;
-                Object idValue = table.getValueAt(row, idColumn);
+                int modelRow = table.convertRowIndexToModel(row);
+                Object idValue = table.getModel().getValueAt(modelRow, idColumn);
                 if (idValue instanceof Integer id) {
                     onRowClicked.accept(id);
                 }

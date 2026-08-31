@@ -1,5 +1,5 @@
 package za.ac.cput.ui.clinicstaff.components;
-
+//JOSHUA REID ADAMS - 230317693
 import za.ac.cput.model.domain.Appointment;
 import za.ac.cput.ui.theme.AppTheme;
 import za.ac.cput.ui.theme.FontManager;
@@ -7,12 +7,7 @@ import za.ac.cput.ui.theme.FontManager;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Owns the Approve/Reject CTAs for a PENDING appointment — replaces the
- * old inline table-action-column buttons. Nothing shows for non-PENDING
- * rows; the doctor's already been assigned and the workflow moves on
- * without further admin/nurse action at this stage.
- */
+
 public class AppointmentDetailsDialog {
 
     public interface ActionCallback {

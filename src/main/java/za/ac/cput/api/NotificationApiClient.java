@@ -1,5 +1,5 @@
 package za.ac.cput.api;
-
+//RAUL JAAIM EVERTS - 230270565
 import com.fasterxml.jackson.core.type.TypeReference;
 import za.ac.cput.model.domain.Notification;
 
@@ -21,9 +21,8 @@ public class NotificationApiClient {
         return client.get("/notifications/read/" + id, Notification.class);
     }
 
-
-    public BaseApiClient.ApiResult<Notification> markAsRead(int id) {
-        return client.patch("/notifications/read/" + id, null, Notification.class);
+    public BaseApiClient.ApiResult<Void> markAsRead(int id) {
+        return client.put("/notifications/markread/" + id, "", Void.class);
     }
 
     public BaseApiClient.ApiResult<Notification> update(Notification notification) {
@@ -57,5 +56,4 @@ public class NotificationApiClient {
     public BaseApiClient.ApiResult<List<Notification>> findByType(String type) {
         return client.getList("/notifications/type/" + type, new TypeReference<List<Notification>>() {});
     }
-
 }

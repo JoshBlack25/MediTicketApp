@@ -1,5 +1,5 @@
 package za.ac.cput.ui.auth;
-
+//AIDAN BARENDS - 230155639
 import za.ac.cput.api.ApiClientProvider;
 import za.ac.cput.api.BaseApiClient;
 import za.ac.cput.model.auth.PatientSignupRequest;
@@ -27,6 +27,7 @@ public class PatientSignupPanel extends JPanel {
     private LabeledTextField firstName, middleName, lastName, email, cellPhone, dob, emergencyContact;
     private ToggleablePasswordField password, confirmPassword;
     private JLabel errorLabel;
+    private PrimaryButton createAccount;
 
     private static final DateTimeFormatter DOB_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -117,7 +118,7 @@ public class PatientSignupPanel extends JPanel {
         errorLabel.setForeground(AppTheme.STATUS_DANGER);
         errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        PrimaryButton createAccount = new PrimaryButton("Create Account");
+        createAccount = new PrimaryButton("Create Account");
         createAccount.setAlignmentX(Component.LEFT_ALIGNMENT);
         createAccount.setMaximumSize(new Dimension(240, 46));
         createAccount.addActionListener(e -> onCreateAccount());
@@ -169,6 +170,7 @@ public class PatientSignupPanel extends JPanel {
         return tagline;
     }
 
+
     private void onCreateAccount() {
         String pwd = new String(password.getPassword());
         String confirmPwd = new String(confirmPassword.getPassword());
@@ -192,6 +194,8 @@ public class PatientSignupPanel extends JPanel {
         }
 
         errorLabel.setText(" ");
+        createAccount.setEnabled(false);
+        createAccount.setText("Creating Account...");
 
         PatientSignupRequest request = new PatientSignupRequest(
                 firstName.getText().trim(),
@@ -205,17 +209,41 @@ public class PatientSignupPanel extends JPanel {
                 emergencyContact.getText().trim()
         );
 
-        BaseApiClient.ApiResult<String> result = ApiClientProvider.getInstance().auth().signup(request);
+        SwingWorker<BaseApiClient.ApiResult<String>, Void> worker =
+                new SwingWorker<>() {
+                    @Override
+                    protected BaseApiClient.ApiResult<String> doInBackground() {
+                        // Runs off the EDT — safe to block here.
+                        return ApiClientProvider.getInstance().auth().signup(request);
+                    }
 
-        if (result.isSuccess()) {
-            AppDialog.show(this, "Account Created",
-                    "Your account has been created successfully.\nPlease check your email to verify your account before logging in.",
-                    AppDialog.Type.SUCCESS);
-            clearForm();
-            appFrame.showScreen(AppFrame.SCREEN_LOGIN);
-        } else {
-            errorLabel.setText(result.getMessage() != null ? result.getMessage() : "Signup failed.");
-        }
+                    @Override
+                    protected void done() {
+                        // Back on the EDT automatically — safe to touch Swing components here.
+                        createAccount.setEnabled(true);
+                        createAccount.setText("Create Account");
+
+                        BaseApiClient.ApiResult<String> result;
+                        try {
+                            result = get();
+                        } catch (Exception e) {
+                            errorLabel.setText("Something went wrong. Please try again.");
+                            return;
+                        }
+
+                        if (result.isSuccess()) {
+                            clearForm();
+                            AppDialog.show(PatientSignupPanel.this, "Account Created",
+                                    "Your account has been created successfully.\nPlease check your email and click the verification link before logging in.",
+                                    AppDialog.Type.SUCCESS);
+                            appFrame.showScreen(AppFrame.SCREEN_LOGIN);
+                        } else {
+                            errorLabel.setText(result.getMessage() != null ? result.getMessage() : "Signup failed.");
+                        }
+                    }
+                };
+
+        worker.execute();
     }
 
     private void clearForm() {
